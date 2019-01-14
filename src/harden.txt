@@ -1,0 +1,271 @@
+# Based on:
+# kernsec.org: https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings
+# docs.clip-os.org: https://docs.clip-os.org/clipos/kernel.html
+#########################################################
+# Base 
+
+# Report BUG() conditions and kill the offending process.
+CONFIG_BUG=y
+
+# Make sure kernel page tables have safe permissions.
+CONFIG_DEBUG_KERNEL=y
+CONFIG_DEBUG_RODATA=y
+CONFIG_STRICT_KERNEL_RWX=y
+
+# Report any dangerous memory permissions (not available on all archs).
+CONFIG_DEBUG_WX=y
+
+# Use -fstack-protector-strong (gcc 4.9+) for best stack canary coverage.
+# Prior to v4.18, these are:
+CONFIG_STACKPROTECTOR=y
+CONFIG_STACKPROTECTOR_STRONG=y
+
+# Do not allow direct physical memory access (but if you must have it, at least enable STRICT mode...)
+CONFIG_DEVMEM=n
+# CONFIG_STRICT_DEVMEM=y
+# CONFIG_IO_STRICT_DEVMEM=y
+
+# Provides some protections against SYN flooding.
+CONFIG_SYN_COOKIES=y
+
+# Perform additional validation of various commonly targeted structures.
+CONFIG_DEBUG_CREDENTIALS=y
+CONFIG_DEBUG_NOTIFIERS=y
+CONFIG_DEBUG_LIST=y
+CONFIG_DEBUG_SG=y
+CONFIG_BUG_ON_DATA_CORRUPTION=y
+CONFIG_SCHED_STACK_END_CHECK=y
+
+# Provide userspace with seccomp BPF API for syscall attack surface reduction.
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+
+# Provide userspace with ptrace ancestry protections.
+CONFIG_SECURITY=y
+CONFIG_SECURITY_YAMA=y
+
+# Perform usercopy bounds checking. (And disable fallback to gain full whitelist enforcement.)
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_HARDENED_USERCOPY_FALLBACK=n
+
+# Randomize allocator freelists, harden metadata.
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_SLAB_FREELIST_HARDENED=y
+
+# Allow allocator validation checking to be enabled (see "slub_debug=P" below).
+CONFIG_SLUB_DEBUG=y
+
+# Wipe higher-level memory allocations when they are freed (needs "page_poison=1" command line below).
+# (If you can afford even more performance penalty, leave
+CONFIG_PAGE_POISONING=y
+CONFIG_PAGE_POISONING_NO_SANITY=n
+CONFIG_PAGE_POISONING_ZERO=y
+
+# Adds guard pages to kernel stacks (not all architectures support this yet).
+CONFIG_VMAP_STACK=y
+
+# Perform extensive checks on reference counting.
+CONFIG_REFCOUNT_FULL=y
+
+# Check for memory copies that might overflow a structure in str*() and mem*() functions both at build-time and run-time.
+CONFIG_FORTIFY_SOURCE=y
+
+# Dangerous; enabling this allows direct physical memory writing.
+CONFIG_ACPI_CUSTOM_METHOD=n
+
+# Dangerous; enabling this disables brk ASLR.
+CONFIG_COMPAT_BRK=n
+
+# Dangerous; enabling this allows direct kernel memory writing.
+CONFIG_DEVKMEM=n
+
+# Dangerous; exposes kernel text image layout.
+CONFIG_PROC_KCORE=n
+
+# Dangerous; enabling this disables VDSO ASLR.
+CONFIG_COMPAT_VDSO=n
+
+# Dangerous; enabling this allows replacement of running kernel.
+CONFIG_KEXEC=n
+CONFIG_KEXEC_FILE=n
+
+# Dangerous; enabling this allows replacement of running kernel.
+CONFIG_HIBERNATION=n
+
+# Prior to v4.1, assists heap memory attacks; best to keep interface disabled.
+CONFIG_INET_DIAG=n
+
+# Easily confused by misconfigured userspace, keep off.
+CONFIG_BINFMT_MISC=n
+
+# Use the modern PTY interface (devpts) only.
+CONFIG_LEGACY_PTYS=n
+
+# Reboot devices immediately if kernel experiences an Oops.
+CONFIG_PANIC_ON_OOPS=y
+CONFIG_PANIC_TIMEOUT=-1
+
+# But if CONFIG_MODULE=y is needed, at least they must be signed with a per-build key.
+CONFIG_STRICT_MODULE_RWX=y
+CONFIG_MODULE_SIG=y
+CONFIG_MODULE_SIG_FORCE=y
+CONFIG_MODULE_SIG_ALL=y
+CONFIG_MODULE_SIG_SHA512=y
+CONFIG_MODULE_SIG_HASH="sha512"
+
+#########################################################
+# GCC
+
+# Enable GCC Plugins
+CONFIG_GCC_PLUGINS=y
+
+# Gather additional entropy at boot time for systems that may not have appropriate entropy sources.
+CONFIG_GCC_PLUGIN_LATENT_ENTROPY=y
+
+# Force all structures to be initialized before they are passed to other functions.
+CONFIG_GCC_PLUGIN_STRUCTLEAK=y
+CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL=y
+
+# Randomize the layout of system structures. This may have dramatic performance impact, so
+# use with caution or also use CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE=y
+CONFIG_GCC_PLUGIN_RANDSTRUCT=y
+
+#########################################################
+# X86_64
+
+# Full 64-bit means PAE and NX bit.
+CONFIG_X86_64=y
+
+# Disallow allocating the first 64k of memory.
+CONFIG_DEFAULT_MMAP_MIN_ADDR=65536
+
+# Randomize position of kernel and memory.
+CONFIG_RANDOMIZE_BASE=y
+CONFIG_RANDOMIZE_MEMORY=y
+
+# Modern libc no longer needs a fixed-position mapping in userspace, remove it as a possible target.
+CONFIG_LEGACY_VSYSCALL_NONE=y
+
+# Enable Kernel Page Table Isolation to remove an entire class of cache timing side-channels.
+CONFIG_PAGE_TABLE_ISOLATION=y
+
+# Remove additional attack surface, unless you really need them.
+CONFIG_IA32_EMULATION=n
+CONFIG_X86_X32=n
+CONFIG_MODIFY_LDT_SYSCALL=n
+
+#########################################################
+# Clip OS part
+
+# Need the auditing infrastructure (AppArmor,SELinux)
+CONFIG_AUDIT=y
+
+# We do not need .config to be available at runtime.
+CONFIG_IKCONFIG=n
+
+# Symbols are only useful for debug and attack purposes.
+CONFIG_KALLSYMS=n
+
+# This unlocks additional configuration options we need.
+CONFIG_EXPERT=y
+
+# Not sure for this, TOR, chrom(e|ium), and many other app can have need
+CONFIG_USER_NS=n
+
+# Merging SLAB caches can make heap exploitation easier.
+CONFIG_SLAB_MERGE_DEFAULT=n
+
+# Do not weaken structure randomization
+CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE=n
+
+# Use maximum number of randomized bits for the mmap base address on x86_64. 
+CONFIG_ARCH_MMAP_RND_BITS=32
+
+#########################################################
+# Processor type and features
+
+# Retpolines are needed to protect against Spectre v2. GCC 7.3.0 or higher is required.
+CONFIG_RETPOLINE=y
+
+CONFIG_X86_VSYSCALL_EMULATION=n
+
+# Needed to benefit from microcode updates and thus security fixes
+CONFIG_MICROCODE=y
+
+# Related to MICROCODE
+CONFIG_X86_MSR=y
+
+# Enabling this feature can make cache side-channel attacks such as FLUSH+RELOAD much easier to carry out.
+CONFIG_KSM=n
+
+# Memory Type Range Registers can make speculative execution bugs a bit harder to exploit.
+CONFIG_MTRR=y
+
+# Page Attribute Tables are the modern equivalents of MTRRs
+CONFIG_X86_PAT=y
+
+# Enable the RDRAND instruction to benefit from a secure hardware RNG if supported. 
+CONFIG_ARCH_RANDOM=y
+
+# Enable Supervisor Mode Access Prevention to prevent ret2usr exploitation techniques. 
+CONFIG_X86_SMAP=y
+
+# Deprecated in GCC 8 and will probably be dropped in GCC 9.
+CONFIG_X86_INTEL_MPX=n
+
+# Memory Protection Keys are a promising feature but they are still not supported on current hardware.
+CONFIG_X86_INTEL_MEMORY_PROTECTION_KEYS=n
+
+# A crash dump can potentially provide an attacker with useful information.
+CONFIG_CRASH_DUMP=n
+
+# This is not supposed to be needed by userspace applications and only increases the kernel attack surface.
+CONFIG_MODIFY_LDT_SYSCALL=n
+
+#########################################################
+# Executable file formats / Emulations
+
+# We do not want our kernel to support miscellaneous binary classes. 
+CONFIG_BINFMT_MISC=n
+
+# Core dumps can provide an attacker with useful information.
+CONFIG_COREDUMP=n
+
+#########################################################
+# Device Drivers
+
+# The /dev/port device should not be used anymore by userspace, and it could increase the kernel attack surface.
+CONFIG_DEVPORT=n
+
+# The IOMMU allows for protecting the system’s main memory from arbitrary accesses from devices (e.g., DMA attacks).
+CONFIG_IOMMU_SUPPORT=y
+
+#########################################################
+# File Systems
+
+# Enabling this would provide an attacker with precious information on the running kernel.
+CONFIG_PROC_KCORE=n
+
+#########################################################
+# Kernel hacking
+
+# This should only be needed for debugging.
+CONFIG_MAGIC_SYSRQ=n
+
+# Enable sanity checks in virtual to page code.
+CONFIG_DEBUG_VIRTUAL=y
+
+# The debugfs virtual file system is only useful for debugging and protecting it would require additional work.
+CONFIG_DEBUG_FS=n
+
+# Using the slub_debug command line parameter provides more fine grained control.
+CONFIG_SLUB_DEBUG_ON=n
+
+#########################################################
+# Security
+
+# Prevent unprivileged users from gathering information from the kernel log buffer via dmesg(8).
+CONFIG_SECURITY_DMESG_RESTRICT=y
+
+# Not sure here...
+# CONFIG_INTEL_TXT=n
