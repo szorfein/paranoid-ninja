@@ -68,7 +68,9 @@ CONFIG_VMAP_STACK=y
 CONFIG_REFCOUNT_FULL=y
 
 # Check for memory copies that might overflow a structure in str*() and mem*() functions both at build-time and run-time.
-CONFIG_FORTIFY_SOURCE=y
+# Doesn't work with ZFS, SPL failed to compile with: (tested with v0.7.5)
+# '->count_objects callback exists... configure: error: error'
+CONFIG_FORTIFY_SOURCE=n
 
 # Dangerous; enabling this allows direct physical memory writing.
 CONFIG_ACPI_CUSTOM_METHOD=n
@@ -128,7 +130,9 @@ CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL=y
 
 # Randomize the layout of system structures. This may have dramatic performance impact, so
 # use with caution or also use CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE=y
-CONFIG_GCC_PLUGIN_RANDSTRUCT=y
+# Normally nice but doesn't work with ZFS, zfs-kmod fail:
+# "unsupported stack pointer realignment" (tested with v0.7.5)
+CONFIG_GCC_PLUGIN_RANDSTRUCT=n
 
 #########################################################
 # X86_64
@@ -169,14 +173,15 @@ CONFIG_KALLSYMS=n
 # This unlocks additional configuration options we need.
 CONFIG_EXPERT=y
 
-# Not sure for this, TOR, chrom(e|ium), and many other app can have need
-CONFIG_USER_NS=n
+# Not sure for this, TOR, chrom(e|ium), and many other app can will need
+CONFIG_USER_NS=y
 
 # Merging SLAB caches can make heap exploitation easier.
 CONFIG_SLAB_MERGE_DEFAULT=n
 
 # Do not weaken structure randomization
-CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE=n
+# GCC_PLUGIN_RANDSTRUCT is disable for now cause ZFS error
+# CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE=n
 
 # Use maximum number of randomized bits for the mmap base address on x86_64. 
 CONFIG_ARCH_MMAP_RND_BITS=32
