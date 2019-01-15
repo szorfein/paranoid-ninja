@@ -7,9 +7,7 @@ Script to have an harden system, actually only work on a system 64 bits with a n
 ### Kernel
 Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings).
 **TODO List** 
-+ Add a wrapper into paranoid.sh
-+ Add compilation for nftables, iptables
-+ Add sysctl options
++ Add compilation for iptables
 + Add kernel boot params for grub2
 
 ### Firewall

@@ -85,6 +85,31 @@ forIntel() {
   chkOption "CONFIG_INTEL_IOMMU_DEFAULT_ON=y"
 }
 
+# Apply src/sysctl.txt to /etc/sysctl.conf
+addSysctl() {
+  local s f clean sysl is_exist
+  f=/etc/sysctl.conf
+  [[ ! -f $f ]] && die "file $f no found"
+  echo -e "\n[*] Check $f..."
+  for sysl in $(grep -iE "^[a-z]" $OLD/src/sysctl.txt); do
+    s=$(grep $sysl $f)
+    clean=${sysl%=*}
+    is_exist=$(grep $clean $f)
+    if [[ -z $s ]] && [[ -z $is_exist ]]; then
+      printf "${cyan}%s${white}%s${endc}\n" \
+        "[OK]" " New rule $sysl added"
+      echo $sysl >> $f
+    elif [[ -z $s ]] && [[ $is_exist ]] ; then
+      sed -i "s:${is_exist}:${sysl}:g" $f
+      printf "${cyan}%s${white}%s${endc}\n" \
+        "[OK]" "Changed rule $is_exist with $sysl"
+    else
+      printf "${cyan}%s${white}%s${endc}\n" \
+        "[OK]" " $sysl"
+    fi
+  done
+}
+
 check_root() {
   if [[ "$(id -u)" -ne 0 ]]; then
     printf "\\n${red}%s${endc}\\n" \
@@ -119,6 +144,12 @@ done
 # Add special configs by CPU
 if [ $FILE == "harden.txt" ] ; then
   forIntel
+fi
+
+# Add sysctl
+if [[ $FILE == "harden.txt" ]] ||
+  [[ $FILE == "sysctl.txt" ]] ; then
+  addSysctl
 fi
 
 # clean work
