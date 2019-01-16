@@ -38,6 +38,14 @@ kernel() {
 
 ######################################################
 # Firewall
+firewall() {
+  if [ $1 == "nftables" ] ; then 
+    . $DIR/nftables.sh
+  elif [ $1 == "iptables" ] ; then
+    echo "Not available for now"
+    exit 1
+  fi
+}
 
 ######################################################
 # Show menu
@@ -46,12 +54,12 @@ menu() {
     "-k, --kernel    Add [FEAT] to your kernel"
 
   printf "${green}%s${endc}\\n" \
-    "-t, --transparent-proxy    Transparent-proxy|TOR on [PROXY]"
+    "-t, --transparent-tor    Transparent-tor on [FIREWALL]"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
-    "[FEAT] are harden,nftable" \
-    "[PROXY] are nftables"
+    "[FEAT] are harden, nftables, sysctl" \
+    "[FIREWALL] are nftables"
 
   printf "\n${white}%s${endc}\n" \
     "e.g: $prog_name -k harden OR $prog_name -t nftables"

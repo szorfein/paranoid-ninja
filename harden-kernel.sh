@@ -1,8 +1,8 @@
 #!/bin/sh
 
 FILE="$1.txt"
-#DIR=/usr/src/linux-4.19.9-gentoo/
-DIR=/usr/src/linux
+DIR=/usr/src/linux-4.19.9-gentoo/
+#DIR=/usr/src/linux
 CONF=$DIR/.config
 OLD=$(pwd)
 
