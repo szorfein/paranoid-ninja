@@ -4,6 +4,10 @@
 
 Script to have an harden system, actually only work on a system 64 bits with a normal source. (tested on the vanilla linux-4.19.9).
 
+## Dependencies
+
+iproute2, shuf, urandom, util-linux, nftables OR iptables, systemd OR systemv.
+
 ### Kernel
 Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings).
 **TODO List** 

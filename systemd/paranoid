@@ -1,0 +1,68 @@
+#!/bin/sh
+
+SHUF=/usr/bin/shuf
+IP=/bin/ip
+DD=/bin/dd
+HEXDUMP=/usr/bin/hexdump
+DEVICE="$2"
+
+#######################################################
+# Create a MAC address with urandom
+
+HEX=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
+MAC=$(echo -n "$HEX"; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
+
+change_mac() {
+  $IP link set dev $DEVICE down
+  $IP link set dev $DEVICE address $MAC
+  $IP link set dev $DEVICE up
+  echo "[*] NEW MAC = $MAC"
+}
+
+#######################################################
+# Create a random number for ip like 192.168.1.<RAND>
+
+DHCPD="no"
+STATIC="random"
+ROUTER="192.168.2.1"
+RANDOM_RANGE="2-254"
+NUM=$($SHUF -i $RANDOM_RANGE -n 1)
+IP_ADDR=${ROUTER%.*}.$NUM
+BROAD=${ROUTER%.*}.255
+
+change_ip() {
+  # Clear old ip
+  $IP address flush dev $DEVICE
+  # New ip
+  $IP addr add $IP_ADDR/24 broadcast $BROAD dev $DEVICE
+  $IP route add default via $ROUTER dev $DEVICE
+  echo "[*] NEW IP = $IP_ADDR"
+}
+
+#######################################################
+# Reload other services
+
+reload_service() {
+  /bin/systemctl restart tor
+  /usr/lib/systemd/scripts/nftables.sh
+}
+
+start() {
+  change_mac
+  change_ip
+  reload_service
+}
+
+stop() {
+  $IP link set dev $DEVICE down
+}
+
+if [ $1 == "start" ] ; then
+  start
+elif [ $1 == "reload" ] ; then
+  start
+elif [ $1 == "stop" ] ; then
+  stop
+else
+  echo "Unknow argument"
+fi

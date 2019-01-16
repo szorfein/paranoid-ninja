@@ -44,7 +44,16 @@ firewall() {
   elif [ $1 == "iptables" ] ; then
     echo "Not available for now"
     exit 1
+  else
+    echo "Not a valid firewall"
+    exit 1
   fi
+}
+
+######################################################
+# Systemd
+systemd() {
+  . $DIR/systemd.sh
 }
 
 ######################################################
@@ -55,6 +64,9 @@ menu() {
 
   printf "${green}%s${endc}\\n" \
     "-t, --transparent-tor    Transparent-tor on [FIREWALL]"
+
+  printf "${green}%s${endc}\\n" \
+    "-s, --systemd    Install systemd script"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
@@ -85,6 +97,10 @@ while [ "$#" -gt 0 ]; do
     -t | --transparent-proxy)
       firewall $2
       shift
+      ;;
+    -s | --systemd)
+      systemd
+      exit 0
       ;;
     -v | --version)
       echo "print_version"
