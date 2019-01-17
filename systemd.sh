@@ -51,3 +51,8 @@ done
 
 install -m 755 "$DIR/nftables.sh" $SYSTEMD_SCRIPT
 echo "[*] nftables.sh installed"
+
+######################################################
+# 
+
+echo "[*] Start: systemctl start paranoid@wlp2s0"

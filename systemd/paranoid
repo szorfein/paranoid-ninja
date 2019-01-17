@@ -55,6 +55,7 @@ start() {
 
 stop() {
   $IP link set dev $DEVICE down
+  /sbin/nft flush ruleset
 }
 
 if [ $1 == "start" ] ; then

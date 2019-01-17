@@ -1,8 +1,10 @@
 [Unit]
-Description="Randomize MAC, localtime, ip... on %I"
+Description="Randomize MAC, localtime, ip on %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
-Wants=network-pre.target
-Before=network-pre.target
+Wants=network.target
+Before=network.target
+Wants=wpa_supplicant@%i.service
+Requires=nftables.service
 
 [Service]
 ExecStart=/usr/lib/systemd/scripts/paranoid start %i
