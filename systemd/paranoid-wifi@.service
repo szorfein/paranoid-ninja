@@ -1,8 +1,9 @@
 [Unit]
-Description="Randomize MAC, localtime, ip on ethernet %I"
+Description="Randomize MAC, localtime, ip on %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
 Wants=network.target
 Before=network.target
+Wants=wpa_supplicant@%i.service
 Requires=nftables.service
 JobTimeoutSec=1m
 

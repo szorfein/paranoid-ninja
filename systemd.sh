@@ -5,7 +5,7 @@ SYSTEMD_SCRIPT=/usr/lib/systemd/scripts/
 DIR=$(pwd)
 
 SCRIPTS="paranoid"
-SERVICES="paranoid@.service"
+SERVICES="paranoid@.service paranoid-wifi@.service"
 
 die() {
   printf "${red}%s${white}%s${endc}\n" \
@@ -55,4 +55,5 @@ echo "[*] nftables.sh installed"
 ######################################################
 # 
 
-echo "[*] Start: systemctl start paranoid@wlp2s0"
+echo "[*] For ethernet card: systemctl start paranoid@wlp2s0"
+echo "[*] For wifi card: systemctl start paranoid-wifi@wlp2s0"

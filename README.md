@@ -12,6 +12,7 @@ iproute2, shuf, urandom, util-linux, nftables, systemd.
 ### Kernel
 Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings).  
 **TODO List** 
++ backup .config before edit
 + Add compilation for systemd
 + Add compilation for iptables
 + Add kernel boot params for grub2
@@ -19,12 +20,16 @@ Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.htm
 ### Firewall
 Just add a basic and secure firewall with log and transparent proxy with TOR, inspired by the script [kalitorify](https://github.com/brainfucksec/kalitorify.git), i've create custom rule for nftables.  
 **TODO List** 
++ backup file { torrc,resolv.conf,rules-save } before edit
++ change /etc/resolv.conf
 + add iptables rules.
 
 ### Systemd
 I'll write some services especially for randomize the MAC address,the timezone and the hostname at boot.  
 **TODO List**
-+ randomize localtime
++ Write a configuration file !
++ Randomize the hostname
++ Add localtime.sh to systemd script
 
 Be careful, the project is not ready for production :)
 
