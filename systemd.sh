@@ -55,5 +55,5 @@ echo "[*] nftables.sh installed"
 ######################################################
 # 
 
-echo "[*] For ethernet card: systemctl start paranoid@wlp2s0"
+echo "[*] For ethernet card: systemctl start paranoid@enp3s0"
 echo "[*] For wifi card: systemctl start paranoid-wifi@wlp2s0"

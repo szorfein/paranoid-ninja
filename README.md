@@ -7,7 +7,7 @@ Randomize MAC address, localtime, private ip, transparent-torrify with nftables 
 
 ## Dependencies
 
-iproute2, shuf, urandom, util-linux, nftables, systemd.
+iproute2, shuf, urandom, util-linux, nftables, systemd, wpa_supplicant if use a wifi card.
 
 ### Kernel
 Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings).  
@@ -27,9 +27,8 @@ Just add a basic and secure firewall with log and transparent proxy with TOR, in
 ### Systemd
 I'll write some services especially for randomize the MAC address,the timezone and the hostname at boot.  
 **TODO List**
-+ Write a configuration file !
-+ Randomize the hostname
 + Add localtime.sh to systemd script
++ Verify the dependencie for wpa_supplicant 
 
 Be careful, the project is not ready for production :)
 
