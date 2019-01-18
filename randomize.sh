@@ -4,6 +4,10 @@ HWC=$(which hwclock)
 HOSTNAME=$(which hostname)
 XAUTH=$(which xauth)
 CHOWN=$(which chown)
+SYS=$(which systemctl)
+IP=$(which ip)
+IPCALC=$(which ipcalc)
+SHUF=$(which shuf)
 
 LOCALTIME=/etc/localtime
 DIR=$(pwd)
@@ -26,13 +30,16 @@ check_root() {
 # Check deps
 
 check_root
-[[ -z $HWC ]] && die "command hwclock no found"
-[[ -z $HOSTNAME ]] && die "command hostname no found"
-[[ -z $XAUTH ]] && die "command xauth no found"
+[[ -z $HWC ]] && die "util-linux is no found, plz install"
+[[ -z $HOSTNAME ]] && die "command hostname is no found"
+[[ -z $XAUTH ]] && die "xauth is no found, plz install"
+[[ -z $SYS ]] && die "systemd is no found, plz install"
+[[ -z $IP ]] && die "iproute2 is no found, plz install"
 
 #######################################################
 # Local Functions
 
+# Write the new hostname in file from $other_host_files
 otherHostFiles() {
   local f rule
   rule="$1"
@@ -50,7 +57,7 @@ forXorg() {
   local xorg_new xorg_old old_host rule x y z com user
   old_host=$1
   rule=$2
-  if [ -f $xauthority_file ] ; then
+  if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
     com="$XAUTH -f $xauthority_file"
     xorg_new="$($com list | grep $old_host | sed "$rule")"
     x=$(echo $xorg_new | awk '{print $1}')
@@ -154,6 +161,89 @@ randHost() {
 }
 
 #######################################################
+# Randomize the MAC address
+
+changeMac() {
+  local hex mac old
+  $IP link show $net_device > /dev/null 2>&1
+  if [ $? -eq 0 ] ; then
+    old=$(ip link show $net_device | grep -i ether | awk '{print $2}')
+    hex=$(echo -n ""; dd bs=1 count=1 if=/dev/urandom 2>/dev/null | hexdump -v -e '/1 "%02X"')
+    mac=$(echo -n "$hex"; dd bs=1 count=5 if=/dev/urandom 2>/dev/null | hexdump -v -e '/1 ":%02X"')
+    $IP link set dev $net_device down
+    $IP link set dev $net_device address $mac
+    $IP link set dev $net_device up
+    echo "[*] Changed mac $old to $mac"
+    $SYS restart tor
+  else
+    echo "[*] Dev $net_device no found, update the config file"
+  fi
+}
+
+#######################################################
+# Update the network address
+
+rand() {
+  local max min range nb
+  max=$($IPCALC $target_router | grep -i hostmax | awk '{print $2}')
+  min=$($IPCALC $target_router | grep -i hostmin | awk '{print $2}')
+  min=${min##*.}
+  range="$(( min + 1 ))-${max##*.}"
+  nb=$($SHUF -i $range -n 1)
+  echo $nb
+}
+
+changeIp() {
+  local randnb network new_ip broad valid
+  network=$(ipcalc $target_router | grep -i network | awk '{print $2}')
+  broad=$(ipcalc $target_router | grep -i broadcast | awk '{print $2}')
+
+  if [[ $static ]] && [[ $static == "random" ]] ; then
+    randnb=$(rand)
+    echo "[*] create a random ip with $randnb"
+  elif [[ $static ]] ; then
+    new_ip=$static/${network#*/}
+    echo "[*] configure addr with $static"
+  else
+    echo "[Err] no value found from paranoid.conf"
+    exit 1
+  fi
+
+  [[ -z $new_ip ]] && new_ip=${target_router%.*}.$randnb/${network#*/}
+
+  valid=$(ipcalc $new_ip | grep -i invalid)
+  if [[ -z $valid ]] ; then
+    echo "Router is $target_router/${network#*/}"
+    echo "finally your new ip is $new_ip"
+    echo "--------------------------------------------"
+    echo "ip address flush dev $net_device"
+    echo "ip addr $new_ip broadcast $broad dev $net_device"
+    echo "ip route add default via $target_router dev $net_device"
+    # restart the firewall
+    sleep 2
+    . $DIR/nftables.sh
+  else
+    echo "[Err] The address $new_ip is incorrect"
+    exit 1
+  fi
+}
+
+# If want random ip, start changeIp(), else use dhcpcd
+updIp() {
+  if [[ $want_dhcpcd ]] && [[ $want_dhcpcd == "no" ]] ; then
+    changeIp
+  elif [[ $want_dhcpcd ]] && [[ $want_dhcpcd == "yes" ]] ; then
+    dhcp=$(which dhcpcd)
+    [[ -z $dhcp ]] && die "[Err] dhcpcd is not installed"
+    [[ -z $SYS ]] && die "{Err] systemd is not installed"
+    $SYS restart dhcpcd
+  else 
+    echo "[Err] Config file is bad... dhcpcd=$want_dhcpcd"
+    exit 1
+  fi
+}
+
+#######################################################
 # Command option
 
 checkConf() {
@@ -198,9 +288,15 @@ if [ $other_host_files ] ; then
     [[ -f $f ]] && BACKUP_FILES+=" $f"
   done
 fi
-
+ 
 backupFiles
-randTimezone
-randHost
+
+# variable from paranoid.conf
+for a in "${randomize[@]}" ; do
+  [[ $a == "mac" ]] && changeMac
+  [[ $a == "timezone" ]] && randTimezone
+  [[ $a == "hostname" ]] && randHost
+  [[ $a == "priv_ip" ]] && updIp
+done
 
 echo "[*] Relaunch your web browser is recommended"

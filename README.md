@@ -7,14 +7,15 @@ Randomize MAC address, localtime, private ip, transparent-torrify with nftables 
 
 ## Dependencies
 
-iproute2, shuf, urandom, util-linux, nftables, systemd, wpa_supplicant if use a wifi card.
+iproute2, shuf, urandom, util-linux, nftables, systemd, ipcalc.  
+
+Optionnal dependencies are: wpa_supplicant if use a wifi card and dhcpcd if need.
 
 ### Kernel
 Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings).  
 **TODO List** 
 + backup .config before edit
-+ Add compilation for systemd
-+ Add compilation for iptables
++ Enhance compilation for iptables
 + Add kernel boot params for grub2
 
 ### Firewall
@@ -36,7 +37,14 @@ Be careful, the project is not ready for production :)
 
     # git clone https://github.com/szorfein/paranoid-ninja.git
 
+## Configure
+
+Make a copy of `paranoid.conf.sample`:
+
+    # cp -a paranoid.conf.sample paranoid.conf
+
+And change at least the value of `net_device=` and `target_router=`
+
 ## Usage
 
     # ./paranoid.sh -h
-

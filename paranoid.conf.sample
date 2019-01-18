@@ -10,14 +10,34 @@ backup_dir=/etc/paranoid/backup
 randomize=( "hostname" "timezone" "mac" "priv_ip" )
 
 #########################################################
+# Network
+
+# Default network device, really important to set.
+# For now, support only one interface
+net_device="wlp2s0"
+
+# Need to reconfigure your static ip
+target_router="192.168.2.1"
+
+# If want dhcpcd, change to yes but your ip 
+# cannot be randomize
+want_dhcpcd="no"
+
+# Static ip
+# You can choose "random" or set an real ip
+# ex: static="192.168.1.111" do not add a submask
+static="random"
+
+#########################################################
 # Hostname change
 
 # ssh dir
 # Need change the hostname in this dir when he change
-# keep it void if no need, e.g: ssh_dir=""
+# keep it void if no need, ex: ssh_dir=""
 ssh_dir="/home/brakk/.ssh"
 
-# Xorg . .Xauthority of current user
+# If use Xorg . .Xauthority of current user
+# else change to xauthority_file=""
 xauthority_file="/home/brakk/.Xauthority"
 
 # Other files where the new hostname have to be apply
@@ -34,4 +54,3 @@ prefix_hostname=( "star" "comet" "nebula" "blackhole" "materia" )
 
 # directory contain all timezone
 timezone_dir=(/usr/share/zoneinfo/*/*)
-
