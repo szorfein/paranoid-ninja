@@ -63,14 +63,14 @@ menu() {
     "-k, --kernel    Add [FEAT] to your kernel"
 
   printf "${green}%s${endc}\\n" \
-    "-t, --transparent-tor    Transparent-tor on nftables or iptables"
+    "-t, --transparent-tor    Transparent-tor on nftables"
 
   printf "${green}%s${endc}\\n" \
     "-s, --systemd    Install systemd script"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
-    "[FEAT] are harden, nftables, sysctl"
+    "[FEAT] are into kernel/* (harden, nftables)"
 
   printf "\n${white}%s${endc}\n" \
     "e.g: $prog_name -k harden OR $prog_name -t nftables"

@@ -33,23 +33,34 @@ check_root
 #######################################################
 # Local Functions
 
+otherHostFiles() {
+  local f rule
+  rule="$1"
+  if [ $other_host_files ] ; then
+    for f in $other_host_files ; do
+      [[ -f $f ]] &&
+        sed -i "$rule" $f
+    done
+  fi
+}
+
 # forXorg, avoid error like display no found
 # http://ubuntuhandbook.org/index.php/2016/06/change-hostname-ubuntu-16-04-without-restart/
 forXorg() {
   local xorg_new xorg_old old_host rule x y z com user
-  com="$XAUTH -f $xauthority_file"
   old_host=$1
   rule=$2
-  user=$(echo ${auto%/*} | sed s:/home/::g)
-  xorg_new="$($com list | grep $old_host | sed "$rule")"
-  x=$(echo $xorg_new | awk '{print $1}')
-  y=$(echo $xorg_new | awk '{print $2}')
-  z=$(echo $xorg_new | awk '{print $3}')
-  xorg_old="$($com list | grep $old_host | awk '{print $1}')"
   if [ -f $xauthority_file ] ; then
+    com="$XAUTH -f $xauthority_file"
+    xorg_new="$($com list | grep $old_host | sed "$rule")"
+    x=$(echo $xorg_new | awk '{print $1}')
+    y=$(echo $xorg_new | awk '{print $2}')
+    z=$(echo $xorg_new | awk '{print $3}')
+    xorg_old="$($com list | grep $old_host | awk '{print $1}')"
+    user=$(echo ${xauthority_file%/*} | sed s:/home/::g)
     echo "[*] changed hostname with xauth"
 
-    # ex: xauth add "$ooo" MIT-MAGIC-COOKIE-1  240a406abe7fac0a35bbe1cb58e09c18
+    # ex: xauth add "blackhole-opsbm4pvto/unix:0" MIT-MAGIC-COOKIE-1  240a406abe7fac0a35bbe1cb58e09c18
     $($com add "$x" $y $z)
 
     # ex: xauth remove "blackhole-opsbm4pvto/unix:0"
@@ -63,16 +74,18 @@ forXorg() {
 }
 
 # exec if ssh_dir is set from conf file.
-rldSSH() {
+forSSH() {
   local old_host file files rule
   old_host="$1"
   rule="$2"
-  files=$(find $ssh_dir -type f | xargs grep $old_host | awk '{print $1}')
-  echo "ssh file found $files"
-  for file in ${files%:*} ; do
-    sed -i "$rule" $file || die "sed in $file"
-    echo "[*] change host in $file"
-  done
+  if [ $ssh_dir ] ; then
+    files=$(find $ssh_dir -type f | xargs grep $old_host | awk '{print $1}')
+    echo "ssh file found $files"
+    for file in ${files%:*} ; do
+      sed -i "$rule" $file || die "sed in $file"
+      echo "[*] change host in $file"
+    done
+  fi
 }
 
 # Write new value of hostname in multiple files
@@ -86,20 +99,24 @@ writeHost() {
   for file in $files ; do
     sed -i "$rule" $file || die "sed 1"
   done
-  if [ $ssh_dir ] ; then
-    rldSSH "$old" "$rule"
-  fi
+  forSSH "$old" "$rule"
   forXorg "$old" "$rule"
+  otherHostFiles "$rule"
 }
 
 backupFiles() {
+  local f
   if [ $backup_dir ] ; then
     [[ ! -d $backup_dir ]] && mkdir -p $backup_dir
-    for file in $BACKUP_FILES; do
-      if [[ ! -f $backup_dir/${file##*/} ]] &&
-        [[ ! -d $backup_dir/${file##*/} ]] ; then
-        cp -a $file $backup_dir
-        echo "[*] Backups $file to $backup_dir ..."
+    # $f can be a directory or a file
+    for f in $BACKUP_FILES ; do
+      if [[ -f "$backup_dir/${f##*/}" ]] ; then
+        echo -n
+      elif [[ -d "$backup_dir/${f##*/}" ]] ; then
+        echo -n
+      else
+        echo "[*] file $f no found, backup..."
+        cp -a "$f" "$backup_dir/"
       fi
     done
   else
@@ -125,8 +142,8 @@ randTimezone() {
 
 randHost() {
   local new r rw
-  if [ $hostname_keywords ] ; then
-    r="${hostname_keywords[RANDOM % ${#hostname_keywords[@]}]}"
+  if [ $prefix_hostname ] ; then
+    r="${prefix_hostname[RANDOM % ${#prefix_hostname[@]}]}"
     new="$r-"
   fi
   rw=$(tr -dc 'a-z0-9' < /dev/urandom | head -c10)
@@ -171,7 +188,16 @@ done
 # Main
 
 # Add ssh_dir to the backup list
-[[ $ssh_dir ]] && BACKUP_FILES+=" $ssh_dir"
+if [ $ssh_dir ] ; then
+  [[ -d $ssh_dir ]] && BACKUP_FILES+=" $ssh_dir"
+fi
+
+# Add other_host_files to the backup list
+if [ $other_host_files ] ; then
+  for f in $other_host_files ; do
+    [[ -f $f ]] && BACKUP_FILES+=" $f"
+  done
+fi
 
 backupFiles
 randTimezone
