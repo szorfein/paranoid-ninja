@@ -1,10 +1,9 @@
 [Unit]
 Description="Randomize MAC, localtime, ip on ethernet %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
-Wants=network.target
-Before=network.target
-Requires=nftables.service
-JobTimeoutSec=1m
+After=network.target nss-lookup.target
+Requires=nftables.service tor.service
+JobTimeoutSec=30
 
 [Service]
 ExecStart=/usr/lib/systemd/scripts/paranoid start %i

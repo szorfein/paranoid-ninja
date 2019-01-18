@@ -14,9 +14,18 @@ die() {
   exit 1
 }
 
+check_root() {
+  if [[ "$(id -u)" -ne 0 ]]; then
+    printf "\\n${red}%s${endc}\\n" \
+      "[ failed ] Please run this program as a root!" 2>&1
+    exit 1
+  fi
+}
+
 #######################################################
 # Check deps
 
+check_root
 [[ -z $HWC ]] && die "command hwclock no found"
 [[ -z $HOSTNAME ]] && die "command hostname no found"
 [[ -z $XAUTH ]] && die "command xauth no found"

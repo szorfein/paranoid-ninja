@@ -85,13 +85,13 @@ forIntel() {
   chkOption "CONFIG_INTEL_IOMMU_DEFAULT_ON=y"
 }
 
-# Apply src/sysctl.txt to /etc/sysctl.conf
+# Apply kernel/sysctl.txt to /etc/sysctl.conf
 addSysctl() {
   local s f clean sysl is_exist
   f=/etc/sysctl.conf
   [[ ! -f $f ]] && die "file $f no found"
   echo -e "\n[*] Check $f..."
-  for sysl in $(grep -iE "^[a-z]" $OLD/src/sysctl.txt); do
+  for sysl in $(grep -iE "^[a-z]" $OLD/kernel/sysctl.txt); do
     s=$(grep $sysl $f)
     clean=${sysl%=*}
     is_exist=$(grep $clean $f)
@@ -121,7 +121,7 @@ check_root() {
 check_root
 
 # Check arg
-[[ ! -f src/$FILE ]] && die "config not available"
+[[ ! -f kernel/$FILE ]] && die "config not available"
 
 # Check if /usr/src/linux exist
 if [ ! -s /usr/src/linux ] ; then
@@ -137,7 +137,7 @@ if [ ! -f $CONF ] ; then
 fi
 
 # Kernel options to check :)
-for config in $(grep -ie "^config" $OLD/src/$FILE) ; do
+for config in $(grep -ie "^config" $OLD/kernel/$FILE) ; do
   chkOption "$config"
 done
 
