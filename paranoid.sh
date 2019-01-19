@@ -3,7 +3,7 @@
 DIR="$(pwd)"
 readonly prog_name="$0"
 
-FUNCS="/etc/paranoid/functions"
+FUNCS="${DIR}/src/functions"
 source "${FUNCS-:/etc/paranoid/functions}"
 
 ######################################################
@@ -46,7 +46,7 @@ kernel() {
 
 firewall() {
   if [ $FIREWALL == "nftables" ] ; then 
-    . /nftables.sh -c $CONF
+    . ${DIR}/nftables.sh -c $CONF
   elif [ $FIREWALL == "iptables" ] ; then
     die "Not available for now"
   else
