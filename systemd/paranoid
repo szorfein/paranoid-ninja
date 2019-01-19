@@ -1,70 +1,54 @@
 #!/bin/sh
 
-SHUF=/usr/bin/shuf
-IP=/bin/ip
-DD=/bin/dd
-HEXDUMP=/usr/bin/hexdump
-DEVICE="$2"
+NFT=$(which nft)
+SYSTEMD_S="/usr/lib/systemd/scripts"
+readonly prog_name="$0"
 
-#######################################################
-# Create a MAC address with urandom
+######################################################
+# Randomize
 
-HEX=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
-MAC=$(echo -n "$HEX"; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
-
-change_mac() {
-  $IP link set dev $DEVICE down
-  $IP link set dev $DEVICE address $MAC
-  $IP link set dev $DEVICE up
-  echo "[*] NEW MAC = $MAC"
+randomize() {
+  . $SYSTEMD_S/randomize.sh -c $CONF
 }
 
-#######################################################
-# Create a random number for ip like 192.168.1.<RAND>
+######################################################
+# Stop
 
-DHCPD="no"
-STATIC="random"
-ROUTER="192.168.2.1"
-RANDOM_RANGE="2-254"
-NUM=$($SHUF -i $RANDOM_RANGE -n 1)
-IP_ADDR=${ROUTER%.*}.$NUM
-BROAD=${ROUTER%.*}.255
-
-change_ip() {
-  # Clear old ip
-  $IP address flush dev $DEVICE
-  # New ip
-  $IP addr add $IP_ADDR/24 broadcast $BROAD dev $DEVICE
-  $IP route add default via $ROUTER dev $DEVICE
-  echo "[*] NEW IP = $IP_ADDR"
+stopParanoid() {
+  $NFT flush ruleset
+  # TODO: reinstall all files in backup dir
 }
 
-#######################################################
-# Reload other services
+######################################################
+# Command options
 
-reload_service() {
-  /bin/systemctl restart tor
-  sleep 1
-  /usr/lib/systemd/scripts/nftables.sh
-}
+if [ "$#" -eq 0 ]; then
+    printf "%s\\n" "$prog_name: Argument required"
+    exit 1
+fi
 
-start() {
-  change_mac
-  change_ip
-  reload_service
-}
+while [ "$#" -gt 0 ] ; do
+  case "$1" in
+    -r | --randomize)
+      RAND=true
+      shift
+      ;;
+    -c | --config)
+      CONF="$2"
+      shift
+      shift
+      ;;
+    -s | --stop)
+      stopParanoid
+      shift
+      ;;
+    *)
+      printf "%s\\n" "$prog_name: Invalid option '$1'"
+      exit 1
+      ;;
+  esac
+done
 
-stop() {
-  $IP link set dev $DEVICE down
-  /sbin/nft flush ruleset
-}
-
-if [ $1 == "start" ] ; then
-  start
-elif [ $1 == "reload" ] ; then
-  start
-elif [ $1 == "stop" ] ; then
-  stop
-else
-  echo "Unknow argument"
+if [[ $RAND ]] && [[ $CONF ]] ; then
+  randomize
 fi

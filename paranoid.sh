@@ -3,9 +3,8 @@
 DIR="$(pwd)"
 readonly prog_name="$0"
 
-FUNCS="$DIR/src/functions"
+FUNCS="/etc/paranoid/functions"
 source "${FUNCS-:/etc/paranoid/functions}"
-CONF_FILE=${DIR/paranoid.conf}
 
 ######################################################
 # Colors
@@ -47,7 +46,7 @@ kernel() {
 
 firewall() {
   if [ $FIREWALL == "nftables" ] ; then 
-    . $DIR/nftables.sh -c $CONF
+    . /nftables.sh -c $CONF
   elif [ $FIREWALL == "iptables" ] ; then
     die "Not available for now"
   else
@@ -66,7 +65,7 @@ randomize() {
 # Systemd
 
 systemd() {
-  . $DIR/systemd.sh
+  . $DIR/systemd.sh -c $CONF
 }
 
 ######################################################
@@ -91,7 +90,7 @@ menu() {
 
   printf "${green}%s${endc}\\n" \
     "-s, --systemd    Install systemd script"
-  echo "usage: $0 [-s]"
+  echo "usage: $0 [-s] [-c PATH]"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
@@ -122,7 +121,7 @@ while [ "$#" -gt 0 ] ; do
       shift
       ;;
     -s | --systemd)
-      systemd
+      SYSTEMD=true
       shift
       ;;
     -r | --randomize)
@@ -160,4 +159,8 @@ fi
 
 if [[ $RAND ]] && [[ $CONF ]] ; then
   randomize
+fi
+
+if [[ $SYSTEMD ]] && [[ $CONF ]] ; then
+  systemd
 fi

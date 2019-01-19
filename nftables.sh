@@ -2,13 +2,13 @@
 
 # Bins
 NFT=$(which nft)
-IP=$(which ip)
+IP=/bin/ip
 
 OUTPUT="/var/lib/nftables/rules-save"
 BACKUP_FILES="/etc/tor/torrc /etc/nftables/nftables.conf /var/lib/nftables/rules-save"
 
 DIR="$(pwd)"
-FUNCS="$DIR/src/functions"
+FUNCS="/etc/paranoid/functions"
 source "${FUNCS-:/etc/paranoid/functions}"
 
 ######################################################

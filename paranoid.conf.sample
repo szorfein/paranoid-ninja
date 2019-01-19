@@ -1,8 +1,11 @@
 #########################################################
 # Globals options
 
+# usefull if need to install systemd script
+install_path=/etc/paranoid
+
 # Will save your files here
-backup_dir=/etc/paranoid/backup
+backup_dir=${install_path}/backup
 
 # You can choose what randomize and skip some action
 # Full options are:

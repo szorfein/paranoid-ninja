@@ -10,6 +10,8 @@ IP=$(which ip)
 IPCALC=$(which ipcalc)
 SHUF=$(which shuf)
 TOR=$(which tor)
+HEXDUMP=$(which hexdump)
+DD=$(which dd)
 
 LOCALTIME=/etc/localtime
 BACKUP_FILES="/etc/hosts /etc/hostname"
@@ -139,9 +141,9 @@ changeMac() {
   local hex mac old
   $IP link show $net_device > /dev/null 2>&1
   if [ $? -eq 0 ] ; then
-    old=$(ip link show $net_device | grep -i ether | awk '{print $2}')
-    hex=$(echo -n ""; dd bs=1 count=1 if=/dev/urandom 2>/dev/null | hexdump -v -e '/1 "%02X"')
-    mac=$(echo -n "$hex"; dd bs=1 count=5 if=/dev/urandom 2>/dev/null | hexdump -v -e '/1 ":%02X"')
+    old=$($IP link show $net_device | grep -i ether | awk '{print $2}')
+    hex=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
+    mac=$(echo -n "$hex"; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
     $IP link set dev $net_device down
     $IP link set dev $net_device address $mac
     $IP link set dev $net_device up
@@ -187,10 +189,9 @@ changeIp() {
   if [[ -z $valid ]] ; then
     echo "Router is $target_router/${network#*/}"
     echo "finally your new ip is $new_ip"
-    echo "--------------------------------------------"
-    echo "ip address flush dev $net_device"
-    echo "ip addr $new_ip broadcast $broad dev $net_device"
-    echo "ip route add default via $target_router dev $net_device"
+    $IP address flush dev $net_device
+    $IP addr add $new_ip broadcast $broad dev $net_device
+    $IP route add default via $target_router dev $net_device
     # restart the firewall
     sleep 2
     . $DIR/nftables.sh -c $CONF
