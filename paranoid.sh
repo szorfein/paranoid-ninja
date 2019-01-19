@@ -3,8 +3,13 @@
 DIR="$(pwd)"
 readonly prog_name="$0"
 
+FUNCS="$DIR/src/functions"
+source "${FUNCS-:/etc/paranoid/functions}"
+CONF_FILE=${DIR/paranoid.conf}
+
 ######################################################
 # Colors
+
 red=$'\e[0;91m'
 green=$'\e[0;92m'
 blue=$'\e[0;94m'
@@ -32,48 +37,65 @@ banner() {
 
 ######################################################
 # Kernel
+
 kernel() {
-  . $DIR/harden-kernel.sh $1
+  . $DIR/kernel.sh -a "$KERNEL" -c $CONF
 }
 
 ######################################################
 # Firewall
+
 firewall() {
-  if [ $1 == "nftables" ] ; then 
-    . $DIR/nftables.sh
-  elif [ $1 == "iptables" ] ; then
-    echo "Not available for now"
-    exit 1
+  if [ $FIREWALL == "nftables" ] ; then 
+    . $DIR/nftables.sh -c $CONF
+  elif [ $FIREWALL == "iptables" ] ; then
+    die "Not available for now"
   else
-    echo "Not a valid firewall"
-    exit 1
+    die "Not a valid firewall"
   fi
 }
 
 ######################################################
+# Randomize
+
+randomize() {
+  . $DIR/randomize.sh -c $CONF
+}
+
+######################################################
 # Systemd
+
 systemd() {
   . $DIR/systemd.sh
 }
 
 ######################################################
 # Show menu
+
 menu() {
   printf "${green}%s${endc}\n" \
-    "-k, --kernel    Add [FEAT] to your kernel"
+    "-k, --kernel    Apply [FEAT] to your kernel source. Default is /usr/src/linux"
+  echo "usage: $0 [-k FEAT] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-t, --transparent-tor    Transparent-tor on nftables"
+    "-t, --transparent-tor    Transparent-torrify on nftables"
+  echo "usage: $0 [-t nftables] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-r, --randomize    Can randomize host, ip, timezone and mac address"
+  echo "usage: $0 [-r] [-c CONF]"
+
+  printf "${green}%s${endc}\\n" \
+    "-c, --config    Apply your config file, required for some commands"
+  echo "usage: $0 [-c PATH]"
 
   printf "${green}%s${endc}\\n" \
     "-s, --systemd    Install systemd script"
+  echo "usage: $0 [-s]"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
     "[FEAT] are into kernel/* (harden, nftables)"
-
-  printf "\n${white}%s${endc}\n" \
-    "e.g: $prog_name -k harden OR $prog_name -t nftables"
 }
 
 ######################################################
@@ -87,32 +109,55 @@ fi
 
 banner
 
-while [ "$#" -gt 0 ]; do
+while [ "$#" -gt 0 ] ; do
   case "$1" in
     -k | --kernel)
-      kernel $2
+      KERNEL="$2"
+      shift
       shift
       ;;
     -t | --transparent-proxy)
-      firewall $2
+      FIREWALL=$2
+      shift
       shift
       ;;
     -s | --systemd)
       systemd
-      exit 0
+      shift
+      ;;
+    -r | --randomize)
+      RAND=true
+      shift
+      ;;
+    -c | --config)
+      CONF="$2"
+      shift
+      shift
       ;;
     -v | --version)
       echo "print_version"
+      shift
       ;;
     -h | --help)
       menu
-      exit 0
+      shift
       ;;
-    -- | -* | *)
+    *)
       printf "%s\\n" "$prog_name: Invalid option '$1'"
       printf "%s\\n" "Try '$prog_name --help' for more information."
       exit 1
       ;;
   esac
-  shift
 done
+
+if [[ $KERNEL ]] && [[ $CONF ]] ; then
+  kernel
+fi
+
+if [[ $FIREWALL ]] && [[ $CONF ]] ; then
+  firewall
+fi
+
+if [[ $RAND ]] && [[ $CONF ]] ; then
+  randomize
+fi

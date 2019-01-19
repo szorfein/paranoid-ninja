@@ -1,3 +1,71 @@
 #!/bin/sh
 
+die() {
+  printf "${red}%s${white}%s${endc}\n" \
+    "[ Failed ]" " $1"
+  exit 1
+}
 
+checkRoot() {
+  if [[ "$(id -u)" -ne 0 ]] ; then
+    printf "\\n${red}%s${endc}\\n" \
+      "[ failed ] Please run this program as a root!" 2>&1
+    exit 1
+  fi
+}
+
+#######################################################
+# Command option
+
+checkConfigFile() {
+  local relativ full
+  relativ="$DIR/$1"
+  full="${1-:/etc/paranoid/paranoid.conf}"
+  if [ -f "$relativ" ] ; then
+    source "$relativ"
+  elif [ -f "$full" ] ; then
+    source "$full"
+  else
+    die "No config file found"
+  fi
+}
+
+checkArgConfig() {
+  [[ "$#" -eq 0 ]] && die "call $0 with -c paranoid.conf"
+  while [ "$#" -gt 0 ] ; do
+    case "$1" in 
+      -c | --config)
+        checkConfigFile $2
+        shift
+        ;;
+      -- | -* | *)
+        die "call $0 with -c paranoid.conf"
+        ;;
+    esac
+    shift
+  done
+}
+
+#######################################################
+# Backup
+
+backupFiles() {
+  local b backup_list
+  backup_list=$1
+  if [ $backup_dir ] ; then
+    [[ ! -d $backup_dir ]] && mkdir -p $backup_dir
+    # $f can be a directory or a file
+    for b in $backup_list ; do
+      if [[ -f "$backup_dir/${b##*/}" ]] ; then
+        echo -n
+      elif [[ -d "$backup_dir/${b##*/}" ]] ; then
+        echo -n
+      else
+        echo "[*] backup $b to $backup_dir ..."
+        cp -a "$b" "$backup_dir/"
+      fi
+    done
+  else
+    echo "[*] backup_dir is unset from config file, skip"
+  fi
+}

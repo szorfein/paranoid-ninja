@@ -1,10 +1,15 @@
 #!/bin/sh
 
-FILE="$1.txt"
-DIR=/usr/src/linux-4.19.9-gentoo/
-#DIR=/usr/src/linux
-CONF=$DIR/.config
-OLD=$(pwd)
+SOURCE_DIR=/usr/src/linux-4.19.9-gentoo
+#SOURCE_DIR=/usr/src/linux
+SOURCE_CONF="$SOURCE_DIR/.config"
+
+DIR=$(pwd)
+FUNCS="$DIR/src/functions"
+source "${FUNCS-:/etc/paranoid/functions}"
+
+FEATS="$DIR/kernel"
+BACKUP_FILES="$SOURCE_CONF /etc/sysctl.conf /etc/default/grub"
 
 # colors
 red=$'\e[0;91m'
@@ -12,16 +17,10 @@ cyan=$'\e[0;96m'
 white=$'\e[0;97m'
 endc=$'\e[0m'
 
-die() {
-  printf "${red}%s${white}%s${endc}\n" \
-    "[Err]" " $1"
-  exit 1
-}
-
 # update config after apply a rule
 updConf() {
   echo -e "\n[*] Update kernel .config..." 
-  make olddefconfig >/dev/null ||\
+  make olddefconfig >/dev/null ||
     die "update conf failed"
 }
 
@@ -31,7 +30,7 @@ retRule() {
   s=$1
   clean=${s%=*}
   q=${s#*=}
-  old=$(grep -ie "$clean" $CONF | head -n 1)
+  old=$(grep -ie "$clean" $SOURCE_CONF | head -n 1)
   [[ -z $old ]] && return
   if [ $q == "n" ]; then
     rule="s:${old}:${clean}=n:g"
@@ -50,7 +49,7 @@ applyRules() {
   s=$1
   rule=$(retRule $s)
   [[ -z $rule ]] && die "rule is void - $s"
-  sed -i "$rule" $CONF || die "sed $rule on $s"
+  sed -i "$rule" $SOURCE_CONF || die "sed $rule on $s"
   printf "${cyan}%s${white}%s${endc}" \
     "[OK]" " new rule apply $1"
   updConf
@@ -61,9 +60,9 @@ chkOption() {
   s=$1
   clean=${s%=*}
   q=${s#*=}
-  not_set=$(grep -iE "^# $clean is not set" $CONF)
-  is_void=$(grep -i $clean $CONF)
-  if grep $1 $CONF >/dev/null; then
+  not_set=$(grep -iE "^# $clean is not set" $SOURCE_CONF)
+  is_void=$(grep -i $clean $SOURCE_CONF)
+  if grep $1 $SOURCE_CONF >/dev/null; then
     printf "${cyan}%s${white}%s${endc}\n" "[OK]" " $1"
   elif [[ $q == n ]] && [[ $not_set ]] ; then
     printf "${cyan}%s${white}%s${endc}\n" "[OK]" " $1"
@@ -91,7 +90,7 @@ addSysctl() {
   f=/etc/sysctl.conf
   [[ ! -f $f ]] && die "file $f no found"
   echo -e "\n[*] Check $f..."
-  for sysl in $(grep -iE "^[a-z]" $OLD/kernel/sysctl.txt); do
+  for sysl in $(grep -iE "^[a-z]" $FEATS/sysctl.txt); do
     s=$(grep $sysl $f)
     clean=${sysl%=*}
     is_exist=$(grep $clean $f)
@@ -110,34 +109,58 @@ addSysctl() {
   done
 }
 
-check_root() {
-  if [[ "$(id -u)" -ne 0 ]]; then
-    printf "\\n${red}%s${endc}\\n" \
-      "[ failed ] Please run this program as a root!" 2>&1
-    exit 1
-  fi
+#########################################################
+# Command line parser
+
+usage() {
+  printf "Usage: %s [-a value] [-c paranoid.conf] args %s\n" $0 $1
+  exit 0
 }
 
-check_root
+while getopts ":a:c:vh" args ; do
+  case "$args" in
+    a ) FILE="$OPTARG.txt" ;;
+    c ) config="$OPTARG" ;;
+    v | h ) usage 1 ;;
+    \? ) usage 2 ;;
+  esac
+done
+shift $(( $OPTIND - 1 ))
 
-# Check arg
-[[ ! -f kernel/$FILE ]] && die "config not available"
-
-# Check if /usr/src/linux exist
-if [ ! -s /usr/src/linux ] ; then
-  die "Link of /usr/src/linux no found, pls create one"
+if [[ -z $FILE ]] || [[ -z $config ]] ; then
+  usage 3
 fi
 
-cd $DIR
+# Check arg
+[[ ! -f $FEATS/$FILE ]] && die "config $FILE not available in $FEATS"
 
-# Check .config
-if [ ! -f $CONF ] ; then 
+checkConfigFile $config
+
+#########################################################
+# Main
+
+checkRoot
+backupFiles $BACKUP_FILES
+
+# Check if /usr/src/linux exist
+# if your system do not have kernel source, just exit.
+if [ ! -s /usr/src/linux ] ; then
+  echo "[*] Link of /usr/src/linux no found, skip..."
+  exit 0
+else
+  echo "[*] Patching kernel source at $SOURCE_DIR"
+fi
+
+cd $SOURCE_DIR
+
+# Check if .config exist or generate a new
+if [ ! -f $SOURCE_CONF ] ; then 
   echo "[*] Generate a base .config file"
   make defconfig >/dev/null || die "make defconfig not available"
 fi
 
 # Kernel options to check :)
-for config in $(grep -ie "^config" $OLD/kernel/$FILE) ; do
+for config in $(grep -ie "^config" $FEATS/$FILE) ; do
   chkOption "$config"
 done
 
@@ -156,5 +179,5 @@ fi
 #echo -e "\n[*] Clean kernel config." 
 #make mrproper >/dev/null
 
-echo -e "\n[*] $FILE has beed apply :)." 
+echo -e "\n[*] $FILE has beed apply" 
 exit 0

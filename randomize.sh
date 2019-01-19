@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# Bins
 HWC=$(which hwclock)
 HOSTNAME=$(which hostname)
 XAUTH=$(which xauth)
@@ -8,33 +9,24 @@ SYS=$(which systemctl)
 IP=$(which ip)
 IPCALC=$(which ipcalc)
 SHUF=$(which shuf)
+TOR=$(which tor)
 
 LOCALTIME=/etc/localtime
-DIR=$(pwd)
 BACKUP_FILES="/etc/hosts /etc/hostname"
 
-die() {
-  echo "[Err] $1"
-  exit 1
-}
-
-check_root() {
-  if [[ "$(id -u)" -ne 0 ]]; then
-    printf "\\n${red}%s${endc}\\n" \
-      "[ failed ] Please run this program as a root!" 2>&1
-    exit 1
-  fi
-}
+DIR=$(pwd)
+FUNCS="$DIR/src/functions"
+source "${FUNCS-:/etc/paranoid/functions}"
 
 #######################################################
 # Check deps
 
-check_root
 [[ -z $HWC ]] && die "util-linux is no found, plz install"
 [[ -z $HOSTNAME ]] && die "command hostname is no found"
 [[ -z $XAUTH ]] && die "xauth is no found, plz install"
 [[ -z $SYS ]] && die "systemd is no found, plz install"
 [[ -z $IP ]] && die "iproute2 is no found, plz install"
+[[ -z $TOR ]] && die "tor is no found, plz install"
 
 #######################################################
 # Local Functions
@@ -111,26 +103,6 @@ writeHost() {
   otherHostFiles "$rule"
 }
 
-backupFiles() {
-  local f
-  if [ $backup_dir ] ; then
-    [[ ! -d $backup_dir ]] && mkdir -p $backup_dir
-    # $f can be a directory or a file
-    for f in $BACKUP_FILES ; do
-      if [[ -f "$backup_dir/${f##*/}" ]] ; then
-        echo -n
-      elif [[ -d "$backup_dir/${f##*/}" ]] ; then
-        echo -n
-      else
-        echo "[*] file $f no found, backup..."
-        cp -a "$f" "$backup_dir/"
-      fi
-    done
-  else
-    echo "[*] backup_dir is unset from config file"
-  fi
-}
-
 #######################################################
 # Randomize the link /etc/localtime from systemd
 
@@ -195,8 +167,8 @@ rand() {
 
 changeIp() {
   local randnb network new_ip broad valid
-  network=$(ipcalc $target_router | grep -i network | awk '{print $2}')
-  broad=$(ipcalc $target_router | grep -i broadcast | awk '{print $2}')
+  network=$($IPCALC $target_router | grep -i network | awk '{print $2}')
+  broad=$($IPCALC $target_router | grep -i broadcast | awk '{print $2}')
 
   if [[ $static ]] && [[ $static == "random" ]] ; then
     randnb=$(rand)
@@ -211,7 +183,7 @@ changeIp() {
 
   [[ -z $new_ip ]] && new_ip=${target_router%.*}.$randnb/${network#*/}
 
-  valid=$(ipcalc $new_ip | grep -i invalid)
+  valid=$($IPCALC $new_ip | grep -i invalid)
   if [[ -z $valid ]] ; then
     echo "Router is $target_router/${network#*/}"
     echo "finally your new ip is $new_ip"
@@ -221,7 +193,7 @@ changeIp() {
     echo "ip route add default via $target_router dev $net_device"
     # restart the firewall
     sleep 2
-    . $DIR/nftables.sh
+    . $DIR/nftables.sh -c $CONF
   else
     echo "[Err] The address $new_ip is incorrect"
     exit 1
@@ -244,38 +216,11 @@ updIp() {
 }
 
 #######################################################
-# Command option
-
-checkConf() {
-  local relativ_path full_path
-  relativ_path="$DIR/$1"
-  full_path="$1"
-  if [ -f $relativ_path ] ; then
-    source "$relativ_path"
-  elif [ -f $full_path ] ; then
-    source "$full_path"
-  else
-    die "No config file found"
-  fi
-}
-
-[[ "$#" -eq 0 ]] && echo "No config file found" && exit 1
-while [ "$#" -gt 0 ] ; do
-  case "$1" in
-    -c | --config)
-      checkConf $2
-      shift
-      ;;
-    -- | -* | *)
-      echo "No config file found"
-      exit 1
-      ;;
-  esac
-  shift
-done
-
-#######################################################
 # Main
+
+checkArgConfig $1 $2
+CONF="$2"
+checkRoot
 
 # Add ssh_dir to the backup list
 if [ $ssh_dir ] ; then
@@ -289,7 +234,7 @@ if [ $other_host_files ] ; then
   done
 fi
  
-backupFiles
+backupFiles $BACKUP_FILES
 
 # variable from paranoid.conf
 for a in "${randomize[@]}" ; do

@@ -1,28 +1,36 @@
 #!/bin/sh
 
-# Dependencies: nftables, whois, bind-tools
+# Bins
+NFT=$(which nft)
+IP=$(which ip)
 
-die() {
-  printf "${red}%s${white}%s${endc}\n" \
-    "[Err]" " $1"
-  exit 1
-}
+OUTPUT="/var/lib/nftables/rules-save"
+BACKUP_FILES="/etc/tor/torrc /etc/nftables/nftables.conf /var/lib/nftables/rules-save"
+
+DIR="$(pwd)"
+FUNCS="$DIR/src/functions"
+source "${FUNCS-:/etc/paranoid/functions}"
 
 ######################################################
-# Check Nftables
+# Check Bins
 
-NFT=$(which nft)
-OUTPUT="/var/lib/nftables/rules-save"
+[[ -z $NFT ]] && die "nftables no found, plz install"
+[[ -z $IP ]] && die "iproute2 no found, plz install"
 
-[[ -z $NFT ]] && die "nftables no found, isn't install?"
+######################################################
+# Command line parser
+
+checkArgConfig $1 $2
+checkRoot
 
 ######################################################
 # Check Network dev and ip
 
 # If fail, put your device up, e.g: eth0
-IF=$(ip a | grep -i "state up" | head -n 1 | awk '{print $2}' | sed -e 's/://g')
+#IF=$(ip a | grep -i "state up" | head -n 1 | awk '{print $2}' | sed -e 's/://g')
+IF=$net_device
 # If fail, put your ip here, e.g: 192.168.1.2/24
-INT_NET=$(ip a show $IF | grep inet | awk '{print $2}' | head -n 1)
+INT_NET=$($IP a show $IF | grep inet | awk '{print $2}' | head -n 1)
 
 [[ -z $IF ]] && die "Device network UP no found."
 [[ -z $INT_NET ]] && die "Ip addr no found."
@@ -40,6 +48,11 @@ id -u tor > /dev/null 2>&1
 
 [[ -z $tor_uid ]] && die "tor_uid no found"
 echo "[*] Found tor uid = $tor_uid"
+
+#####################################################
+# Backups your files
+
+backupFiles $BACKUP_FILES
 
 #####################################################
 # Load Tor variables from /etc/tor/torrc
@@ -195,4 +208,3 @@ echo "[+] Settings up blocking IPS..."
 $NFT list ruleset > /tmp/nftables_save
 echo "[+] Rules saved to /tmp/nftables_save"
 echo "[+] done"
-exit 0
