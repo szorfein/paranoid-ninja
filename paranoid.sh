@@ -46,9 +46,9 @@ kernel() {
 
 firewall() {
   if [ $FIREWALL == "nftables" ] ; then 
-    . ${DIR}/nftables.sh -c $CONF
+    . $DIR/nftables.sh -c $CONF
   elif [ $FIREWALL == "iptables" ] ; then
-    die "Not available for now"
+    . $DIR/iptables.sh -c $CONF
   else
     die "Not a valid firewall"
   fi
@@ -77,7 +77,7 @@ menu() {
   echo "usage: $0 [-k FEAT] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-t, --transparent-tor    Transparent-torrify on nftables"
+    "-t, --transparent-tor    Transparent-torrify on [nftables or iptables]"
   echo "usage: $0 [-t nftables] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \

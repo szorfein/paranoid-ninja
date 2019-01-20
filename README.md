@@ -17,17 +17,16 @@ Combine the configuration of [ClipOS](https://docs.clip-os.org/clipos/kernel.htm
 + Enhance compilation for iptables
 
 ### Firewall
-Just add a basic and secure firewall with log and transparent proxy with TOR, inspired by the script [kalitorify](https://github.com/brainfucksec/kalitorify.git), i've create custom rule for nftables.  
+Add a basic and secure firewall with log and transparent proxy with TOR, inspired by project like [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials), i've create custom rule for nftables.  
 **TODO List** 
-+ change /etc/resolv.conf
 + add iptables rules.
 
-### Systemd
-I'll write some services especially for randomize the MAC address,the timezone and the hostname at boot.  
+## Systemd
+The daemon work with systemd, i've create a services for ethernet and wifi card.  
+The wifi daemon require `wpa_supplicant` and a config file at `/etc/wpa_supplicant/wpa_supplicant-<wifi-card-name>.conf` to work.  
+
 **TODO List**
 + Verify the dependencie for wpa_supplicant 
-
-Be careful, the project is not ready for production :)
 
 ## Install
 

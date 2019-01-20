@@ -91,7 +91,9 @@ forSSH() {
 
 # Write new value of hostname in multiple files
 writeHost() {
-  local new old file files rule
+  local new old file files rule xorg
+  # check if tor running
+  xorg="$(pgrep -x Xorg)"
   # /etc/hostname 
   new="$1"
   old="$(cat /etc/hostname | head -n 1)"
@@ -101,7 +103,7 @@ writeHost() {
     sed -i "$rule" $file || die "sed 1"
   done
   forSSH "$old" "$rule"
-  forXorg "$old" "$rule"
+  [[ ! -z $xorg ]] && forXorg "$old" "$rule"
   otherHostFiles "$rule"
 }
 
