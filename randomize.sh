@@ -235,7 +235,7 @@ if [ $other_host_files ] ; then
   done
 fi
  
-backupFiles $BACKUP_FILES
+backupFiles "$BACKUP_FILES"
 
 # variable from paranoid.conf
 for a in "${randomize[@]}" ; do

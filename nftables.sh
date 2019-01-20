@@ -52,7 +52,7 @@ echo "[*] Found tor uid = $tor_uid"
 #####################################################
 # Backups your files
 
-backupFiles $BACKUP_FILES
+backupFiles "$BACKUP_FILES"
 
 #####################################################
 # Load Tor variables from /etc/tor/torrc
@@ -98,6 +98,7 @@ readonly non_tor="127.0.0.0/8 224.0.0.0/4 192.168.2.0/16"
 
 echo "[+] Flushing existing rules..."
 $NFT flush ruleset
+sleep 1
 
 #######################################################
 # Create necessary table|chain INPUT FORWARD OUTPUT

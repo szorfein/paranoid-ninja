@@ -51,7 +51,7 @@ checkArgConfig() {
 
 backupFiles() {
   local b backup_list
-  backup_list=$1
+  backup_list="$1"
   if [ $backup_dir ] ; then
     [[ ! -d $backup_dir ]] && mkdir -p $backup_dir
     # $f can be a directory or a file

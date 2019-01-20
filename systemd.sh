@@ -26,7 +26,7 @@ CONF=$2
 checkRoot
 
 #######################################################
-# Check systemd on the system
+# Check systemd on the system and dependencies
 
 for d in $DEPS ; do
   which $d >/dev/null 2>&1
@@ -59,7 +59,7 @@ done
 [[ ! -d $install_path ]] && mkdir -p $install_path
 
 ######################################################
-# Copy scripts
+# Copy | Install scripts
 
 s="$DIR/systemd"
 for script in $SCRIPTS ; do
@@ -82,9 +82,10 @@ install -m 755 $DIR/src/functions $install_path/
 echo "[*] functions installed"
 
 ######################################################
-# Patch files
+# Patch systemd script
 
 # patch systemd script with real command path rather than use which
+# patch some path too
 
 SCRIPTS="randomize.sh nftables.sh paranoid"
 

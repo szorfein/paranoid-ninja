@@ -109,6 +109,34 @@ addSysctl() {
   done
 }
 
+# Add kernel boot params to grub2
+applyGrubCmdArgs() {
+  local grub_conf line only_args
+  grub_conf=/etc/default/grub
+  line=$(grep -iE "^GRUB_CMDLINE_LINUX=" $grub_conf)
+  only_args="${line#*=}"
+
+  [[ -f $grub.conf ]] && die "$grub_conf no found"
+  if [[ -z $line ]] ; then
+    echo "option GRUB_CMDLINE_LINUX no found in $grub_conf"
+    exit 1
+  fi
+
+  echo "[*] Check kernel boot params..."
+  for opt in $(grep -ie "^[a-z]" $FEATS/$FILE) ; do
+    if_here=$(echo $line | grep -i $opt)
+    if [[ -z $if_here ]] ; then
+      echo "[*] Option lacked, apply additional value '$opt'"
+      only_args+=" $opt"
+    fi
+  done
+
+  only_args="GRUB_CMDLINE_LINUX=\"$(echo $only_args | sed "s:\"::g")\""
+  echo "[*] Your line final is $only_args"
+
+  sed -i "s:$line:$only_args:g" $grub_conf
+}
+
 #########################################################
 # Command line parser
 
@@ -140,7 +168,7 @@ checkConfigFile $config
 # Main
 
 checkRoot
-backupFiles $BACKUP_FILES
+backupFiles "$BACKUP_FILES"
 
 # Check if /usr/src/linux exist
 # if your system do not have kernel source, just exit.
@@ -173,6 +201,12 @@ fi
 if [[ $FILE == "harden.txt" ]] ||
   [[ $FILE == "sysctl.txt" ]] ; then
   addSysctl
+fi
+
+# Add grub2 cmdline
+if [[ $FILE == "harden.txt" ]] ||
+  [[ $FILE == "grub.txt" ]] ; then
+  applyGrubCmdArgs
 fi
 
 # clean work
