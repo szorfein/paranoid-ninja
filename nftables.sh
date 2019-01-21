@@ -103,6 +103,12 @@ nameserver ::1
 EOF
 
 #######################################################
+# start tor
+
+if_tor=$(pgrep -x tor)
+[[ -z $if_tor ]] && systemctl start tor
+
+#######################################################
 # Process start
 
 echo "[+] Flushing existing rules..."
@@ -144,8 +150,9 @@ addInet input iif $IF ip saddr != $INT_NET drop
 # Accept rules
 addInet input iif lo accept
 addInet input ip protocol icmp icmp type echo-request accept
+# Allow DNS lookups from connected clients and internet access through tor.
 addInet input iif $IF ip daddr $INT_NET udp dport $dns_port counter accept
-
+addInet input ip daddr $INT_NET iif $IF tcp dport $trans_port "tcp flags & (fin|syn|rst|ack) == syn" counter accept
 # Default input log rule
 addInet input iif != lo log prefix \"DROP \"
 

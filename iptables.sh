@@ -105,8 +105,15 @@ EOF
 $MODPROBE ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 
 # Disable ipv6
-sysctl -w net.ipv6.conf.all.disable_ipv6=1
-sysctl -w net.ipv6.conf.default.disable_ipv6=1
+# No need enable on archlinux
+#sysctl -w net.ipv6.conf.all.disable_ipv6=1
+#sysctl -w net.ipv6.conf.default.disable_ipv6=1
+
+####################################################
+# Start tor
+
+if_tor=$(pgrep -x tor)
+[[ -z $if_tor ]] && systemctl start tor
 
 ####################################################
 # Flushing rules
@@ -139,7 +146,7 @@ $IPT -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 iptables -A INPUT -d $INT_NET -i $IF -p udp -m udp --dport $dns_port -j ACCEPT
 
 # default input log rule
-$IPT -A INPUT ! -i lo -J LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+$IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 
 ####################################################
 # Output chain
@@ -154,11 +161,11 @@ $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 $IPT -A OUTPUT -o lo -j ACCEPT
 $IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
 # Allow tor
-$IPT -A OUTPUT -o $NF -m owner --uid-owner $_tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
+$IPT -A OUTPUT -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
 # Allow loopback output
 $IPT -A OUTPUT -d 127.0.0.1/32 -o lo -j ACCEPT
 # Tor transproxy magic
-$IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $_trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
+$IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
 
 # Default output log rule
 $IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
