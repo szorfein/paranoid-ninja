@@ -205,6 +205,8 @@ echo "[+] Setting up NAT rules..."
 $NFT add rule nat prerouting iifname != lo "tcp flags & (fin|syn|rst|ack) == syn" counter redirect to $trans_port
 $NFT add rule nat output udp dport 53 counter redirect to $dns_port
 $NFT add rule nat output tcp dport 53 counter redirect to $dns_port
+$NFT add rule nat output udp dport 5353 counter redirect to $dns_port
+$NFT add rule nat output tcp dport 5353 counter redirect to $dns_port
 $NFT add rule nat output counter ip protocol tcp ip daddr $virt_tor redirect to $trans_port
 $NFT add rule nat output counter ip protocol udp ip daddr $virt_tor redirect to $trans_port
 # Do not torrify torrent

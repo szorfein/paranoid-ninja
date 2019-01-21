@@ -2,7 +2,7 @@
 Description="Randomize MAC, localtime, ip on ethernet %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
 After=network.target nss-lookup.target
-Requires=nftables.service tor.service
+Requires=tor.service
 TimeoutSec=30
 
 [Service]

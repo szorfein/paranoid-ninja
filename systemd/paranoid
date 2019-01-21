@@ -15,8 +15,17 @@ randomize() {
 # Stop
 
 stopParanoid() {
-  $NFT flush ruleset
   # TODO: reinstall all files in backup dir
+  local firewall
+  firewall=$(grep firewall /etc/paranoid/paranoid.conf | sed "s:firewall=::g"| sed "s:\"::g")
+  if [[ $firewall == "nftables" ]] ; then
+    $NFT flush ruleset
+  elif [[ $firewall == "iptables" ]] ; then
+    echo -n
+  else
+    echo "$firewall is no valid"
+    exit 1
+  fi
 }
 
 ######################################################

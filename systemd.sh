@@ -15,7 +15,7 @@ DEP_NO_OK=false
 
 # check deps
 DEPS="which systemctl hwclock hostname xauth chown"
-DEPS+=" ip ipcalc shuf tor dhcpcd tr hexdump dd nft"
+DEPS+=" ip ipcalc shuf tor dhcpcd tr hexdump dd modprobe"
 DEPS_FILE="/dev/urandom"
 
 #######################################################
@@ -74,6 +74,8 @@ done
 
 install -m 755 "$DIR/nftables.sh" $SYSTEMD_SCRIPT/
 echo "[*] nftables.sh installed"
+install -m 755 "$DIR/iptables.sh" $SYSTEMD_SCRIPT/
+echo "[*] iptables.sh installed"
 install -m 755 "$DIR/randomize.sh" $SYSTEMD_SCRIPT/
 echo "[*] randomize.sh installed"
 install -m 755 $CONF $install_path/paranoid.conf
@@ -87,7 +89,8 @@ echo "[*] functions installed"
 # patch systemd script with real command path rather than use which
 # patch some path too
 
-SCRIPTS="randomize.sh nftables.sh paranoid"
+SCRIPTS="randomize.sh nftables.sh iptables.sh paranoid"
+DEPS+=" nft iptables"
 
 for s in $SCRIPTS ; do
   [[ ! -f $SYSTEMD_SCRIPT/$s ]] && echo "[ Failed ] file $s no found"

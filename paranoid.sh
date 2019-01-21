@@ -47,9 +47,9 @@ kernel() {
 firewall() {
   local firewall
   firewall=$(grep firewall $CONF | sed "s:firewall=::g"| sed "s:\"::g")
-  if [ $firewall == "nftables" ] ; then 
+  if [[ $firewall == "nftables" ]] ; then 
     . $DIR/nftables.sh -c $CONF
-  elif [ $firewall == "iptables" ] ; then
+  elif [[ $firewall == "iptables" ]] ; then
     . $DIR/iptables.sh -c $CONF
   else
     die "$firewall Not a valid firewall"
