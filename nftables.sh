@@ -144,6 +144,7 @@ addInet input iif $IF ip saddr != $INT_NET drop
 # Accept rules
 addInet input iif lo accept
 addInet input ip protocol icmp icmp type echo-request accept
+addInet input iif $IF ip daddr $INT_NET udp dport $dns_port counter accept
 
 # Default input log rule
 addInet input iif != lo log prefix \"DROP \"

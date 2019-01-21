@@ -7,6 +7,10 @@ Randomize MAC address, localtime, private ip, transparent-torrify with nftables 
 
 ## Dependencies
 
+### Archlinux
+    
+    # pacman -S ipcalc iptables tor wget
+
 iproute2, shuf, urandom, util-linux, nftables, systemd, ipcalc.  
 
 Optionnal dependencies are: wpa_supplicant if use a wifi card and dhcpcd if need.
@@ -22,6 +26,7 @@ And modify your grub cmdline in consequence via `kernel/grub.txt`.
 Add a basic and secure firewall with log and transparent torrify with TOR, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials), i've create custom rule for nftables.  
 **TODO List** 
 + TEST iptables rules.
++ start tor if not running
 
 ## Systemd
 The daemon work with systemd, i've create a services for ethernet and wifi card.  
