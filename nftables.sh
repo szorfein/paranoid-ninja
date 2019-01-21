@@ -113,11 +113,13 @@ sleep 1
 # Create necessary table|chain INPUT FORWARD OUTPUT
 
 $NFT add table inet filter
+sleep 1
 $NFT add chain inet filter input { type filter hook input priority 0\; policy drop \; }
 $NFT add chain inet filter forward { type filter hook forward priority 0 \; policy drop \; }
 $NFT add chain inet filter output { type filter hook output priority 0\; policy drop \; }
 # Add nat
 $NFT add table nat
+sleep 1
 $NFT add chain nat prerouting { type nat hook prerouting priority 0 \; }
 $NFT add chain nat postrouting { type nat hook postrouting priority 100 \; }
 $NFT add chain nat output { type nat hook output priority 0 \; }
@@ -159,8 +161,14 @@ addInet output oif lo accept
 # Torrent
 addInet output oif $IF udp sport 6881-6890 counter accept
 # Tor
-addInet output skuid $tor_uid counter accept
-addInet output ip daddr 127.0.0.1 tcp dport $trans_port "tcp flags & (fin|syn|rst|ack) == syn" counter accept
+#addInet output skuid $tor_uid counter accept
+# Allow Tor process output
+addInet output oifname $IF skuid $tor_uid tcp dport $trans_port "tcp flags & (fin|syn|rst|ack) == syn" counter ct state new accept
+# Allow loopback output
+addInet output ip daddr 127.0.0.1 oif lo counter accept
+# Tor transproxy magic
+addInet output ip daddr 127.0.0.1 tcp dport $trans_port "tcp flags & (fin|syn|rst|ack) == syn" counter ct state new accept
+
 addInet output ip protocol icmp icmp type echo-request accept
 
 # Default output log rule

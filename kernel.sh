@@ -123,7 +123,7 @@ applyGrubCmdArgs() {
   fi
 
   echo "[*] Check kernel boot params..."
-  for opt in $(grep -ie "^[a-z]" $FEATS/$FILE) ; do
+  for opt in $(grep -ie "^[a-z]" $FEATS/grub.txt) ; do
     if_here=$(echo $line | grep -i $opt)
     if [[ -z $if_here ]] ; then
       echo "[*] Option lacked, apply additional value '$opt'"
