@@ -31,6 +31,10 @@ want_dhcpcd="no"
 # ex: static="192.168.1.111" do not add a submask
 static="random"
 
+# Firewall used
+# Options are nftables or iptables
+firewall="nftables"
+
 #########################################################
 # Hostname change
 

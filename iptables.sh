@@ -208,7 +208,7 @@ for lan in $non_tor 127.0.0.0/9 127.128.0.0/10; do
 done
 
 # Redirect all other output to TOR
-$IPT -t nat -A OUTPUT -p tcp --syn -j REDIRECT --to-ports $trans_port
+$IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
 

@@ -9,9 +9,20 @@ Randomize MAC address, localtime, private ip, transparent-torrify with nftables 
 
 ### Archlinux
     
-    # pacman -S ipcalc iptables tor wget
+    # pacman -S ipcalc tor wget
 
-iproute2, shuf, urandom, util-linux, nftables, systemd, ipcalc.  
+And add `iptables` or `nftables`. `wpa_supplicant` if use wifi.
+
+### Gentoo
+
+    # euse -E urandom systemd
+    # emerge -av net-misc/ipcalc net-vpn/tor sys-apps/iproute2 sys-apps/coreutils 
+
+And add `net-firewall/iptables` or `net-firewall/nftables`, `net-wireless/wpa_supplicant` if use wifi.
+
+### Other distrib need
+
+iproute2, shuf, urandom, util-linux, nftables or iptables, systemd, ipcalc.  
 
 Optionnal dependencies are: wpa_supplicant if use a wifi card and dhcpcd if need.
 
@@ -21,12 +32,13 @@ Modify your kernel parameters with sysctl, all modified flags can be look in `ke
 And modify your grub cmdline in consequence via `kernel/grub.txt`.  
 **TODO List** 
 + Enhance compilation for iptables
++ Add other compilation step with make && make modules_install && make install or print a message
++ Mount a device in /boot 
++ Find a way to recreate an initramfs :( or keep it to user
 
 ### Firewall
 Add a basic and secure firewall with log and transparent torrify with TOR, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials), i've create custom rule for nftables.  
 **TODO List** 
-+ TEST iptables rules.
-+ start tor if not running
 
 ## Systemd
 The daemon work with systemd, i've create a services for ethernet and wifi card.  
@@ -35,6 +47,12 @@ The wifi daemon require `wpa_supplicant` and a config file at `/etc/wpa_supplica
 **TODO List**
 + Verify the dependencie for wpa_supplicant 
 + Split the daemon in multiple daemon ?
+
+Other TODO:
++ create an option --stop --halt or --clean
++ restore files in backup
++ restart tor | firewall 
++ stop the web browser, clean cache, and restore
 
 ## Install
 
@@ -46,7 +64,7 @@ Make a copy of `paranoid.conf.sample`:
 
     # cp -a paranoid.conf.sample paranoid.conf
 
-And change at least the value of `net_device=` and `target_router=`
+And change at least the value of `net_device=`, `target_router=` and the firewall used `firewall=`.
 
 ## Usage
 

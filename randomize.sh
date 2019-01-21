@@ -25,7 +25,6 @@ source "${FUNCS-:/etc/paranoid/functions}"
 
 [[ -z $HWC ]] && die "util-linux is no found, plz install"
 [[ -z $HOSTNAME ]] && die "command hostname is no found"
-[[ -z $XAUTH ]] && die "xauth is no found, plz install"
 [[ -z $SYS ]] && die "systemd is no found, plz install"
 [[ -z $IP ]] && die "iproute2 is no found, plz install"
 [[ -z $TOR ]] && die "tor is no found, plz install"
@@ -51,6 +50,7 @@ forXorg() {
   local xorg_new xorg_old old_host rule x y z com user
   old_host=$1
   rule=$2
+  [[ -z $XAUTH ]] && die "xauth is no found, plz install"
   if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
     com="$XAUTH -f $xauthority_file"
     xorg_new="$($com list | grep $old_host | sed "$rule")"
@@ -196,7 +196,8 @@ changeIp() {
     $IP route add default via $target_router dev $net_device
     # restart the firewall
     sleep 2
-    . $DIR/nftables.sh -c $CONF
+    [[ $firewall == "nftables" ]] && . $DIR/nftables.sh -c $CONF
+    [[ $firewall == "iptables" ]] && . $DIR/iptables.sh -c $CONF
   else
     echo "[Err] The address $new_ip is incorrect"
     exit 1

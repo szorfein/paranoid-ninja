@@ -45,12 +45,14 @@ kernel() {
 # Firewall
 
 firewall() {
-  if [ $FIREWALL == "nftables" ] ; then 
+  local firewall
+  firewall=$(grep firewall $CONF | sed "s:firewall=::g"| sed "s:\"::g")
+  if [ $firewall == "nftables" ] ; then 
     . $DIR/nftables.sh -c $CONF
-  elif [ $FIREWALL == "iptables" ] ; then
+  elif [ $firewall == "iptables" ] ; then
     . $DIR/iptables.sh -c $CONF
   else
-    die "Not a valid firewall"
+    die "$firewall Not a valid firewall"
   fi
 }
 
@@ -77,20 +79,20 @@ menu() {
   echo "usage: $0 [-k FEAT] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-t, --transparent-tor    Transparent-torrify on [nftables or iptables]"
-  echo "usage: $0 [-t nftables] [-c paranoid.conf]"
+    "-t, --transparent-tor    Transparent-torrify on nftables or iptables"
+  echo "usage: $0 [-t] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
     "-r, --randomize    Can randomize host, ip, timezone and mac address"
-  echo "usage: $0 [-r] [-c CONF]"
+  echo "usage: $0 [-r] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
     "-c, --config    Apply your config file, required for some commands"
-  echo "usage: $0 [-c PATH]"
+  echo "usage: $0 [-c paranoid.con]"
 
   printf "${green}%s${endc}\\n" \
     "-s, --systemd    Install systemd script"
-  echo "usage: $0 [-s] [-c PATH]"
+  echo "usage: $0 [-s] [-c paranoid.conf]"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
@@ -116,8 +118,7 @@ while [ "$#" -gt 0 ] ; do
       shift
       ;;
     -t | --transparent-proxy)
-      FIREWALL=$2
-      shift
+      FIREWALL=true
       shift
       ;;
     -s | --systemd)
@@ -153,7 +154,7 @@ if [[ $KERNEL ]] && [[ $CONF ]] ; then
   kernel
 fi
 
-if [[ $FIREWALL ]] && [[ $CONF ]] ; then
+if [[ $FIREWALL == true ]] && [[ $CONF ]] ; then
   firewall
 fi
 
