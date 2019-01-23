@@ -30,84 +30,6 @@ source "${FUNCS-:/etc/paranoid/functions}"
 [[ -z $TOR ]] && die "tor is no found, plz install"
 
 #######################################################
-# Local Functions
-
-# Write the new hostname in file from $other_host_files
-otherHostFiles() {
-  local f rule
-  rule="$1"
-  if [ $other_host_files ] ; then
-    for f in $other_host_files ; do
-      [[ -f $f ]] &&
-        sed -i "$rule" $f
-    done
-  fi
-}
-
-# forXorg, avoid error like display no found
-# http://ubuntuhandbook.org/index.php/2016/06/change-hostname-ubuntu-16-04-without-restart/
-forXorg() {
-  local xorg_new xorg_old old_host rule x y z com user
-  old_host=$1
-  rule=$2
-  [[ -z $XAUTH ]] && die "xauth is no found, plz install"
-  if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
-    com="$XAUTH -f $xauthority_file"
-    xorg_new="$($com list | grep $old_host | sed "$rule")"
-    x=$(echo $xorg_new | awk '{print $1}')
-    y=$(echo $xorg_new | awk '{print $2}')
-    z=$(echo $xorg_new | awk '{print $3}')
-    xorg_old="$($com list | grep $old_host | awk '{print $1}')"
-    user=$(echo ${xauthority_file%/*} | sed s:/home/::g)
-    echo "[*] changed hostname with xauth"
-
-    # ex: xauth add "blackhole-opsbm4pvto/unix:0" MIT-MAGIC-COOKIE-1  240a406abe7fac0a35bbe1cb58e09c18
-    $($com add "$x" $y $z)
-
-    # ex: xauth remove "blackhole-opsbm4pvto/unix:0"
-    $($com remove "$xorg_old")
-
-    # fix permission
-    $CHOWN $user:$user $xauthority_file
-  else
-    echo "[*] $xauthority_file no found, skip"
-  fi
-}
-
-# exec if ssh_dir is set from conf file.
-forSSH() {
-  local old_host file files rule
-  old_host="$1"
-  rule="$2"
-  if [ $ssh_dir ] ; then
-    files=$(find $ssh_dir -type f | xargs grep $old_host | awk '{print $1}')
-    echo "ssh file found $files"
-    for file in ${files%:*} ; do
-      sed -i "$rule" $file || die "sed in $file"
-      echo "[*] change host in $file"
-    done
-  fi
-}
-
-# Write new value of hostname in multiple files
-writeHost() {
-  local new old file files rule xorg
-  # check if tor running
-  xorg="$(pgrep -x Xorg)"
-  # /etc/hostname 
-  new="$1"
-  old="$(cat /etc/hostname | head -n 1)"
-  files="/etc/hostname /etc/hosts"
-  rule="s:$old:$new:g"
-  for file in $files ; do
-    sed -i "$rule" $file || die "sed 1"
-  done
-  forSSH "$old" "$rule"
-  [[ ! -z $xorg ]] && forXorg "$old" "$rule"
-  otherHostFiles "$rule"
-}
-
-#######################################################
 # Randomize the link /etc/localtime from systemd
 
 randTimezone() {
@@ -140,15 +62,24 @@ randHost() {
 # Randomize the MAC address
 
 changeMac() {
-  local hex mac old
+  local mac old lastfive firstbyte
   $IP link show $net_device > /dev/null 2>&1
   if [ $? -eq 0 ] ; then
     old=$($IP link show $net_device | grep -i ether | awk '{print $2}')
-    hex=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
-    mac=$(echo -n "$hex"; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
+    mac=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
+    mac+=$(echo -n ""; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
+    # Get solution here to create a valid MAC address:
+    # https://unix.stackexchange.com/questions/279910/how-go-generate-a-valid-and-random-mac-address
+    lastfive=$( echo "$mac" | cut -d: -f 2-6 )
+    firstbyte=$( echo "$mac" | cut -d: -f 1 )
+    firstbyte=$( printf '%02X' $(( 0x$firstbyte & 254 | 2)) )
+    mac="$firstbyte:$lastfive"
     $IP link set dev $net_device down
+    sleep 1
     $IP link set dev $net_device address $mac
+    sleep 1
     $IP link set dev $net_device up
+    sleep 1
     echo "[*] Changed mac $old to $mac"
     $SYS restart tor
   else
@@ -189,8 +120,8 @@ changeIp() {
 
   valid=$($IPCALC $new_ip | grep -i invalid)
   if [[ -z $valid ]] ; then
-    echo "Router is $target_router/${network#*/}"
-    echo "finally your new ip is $new_ip"
+    #echo "Router is $target_router/${network#*/}"
+    echo "[+] Apply new ip: $new_ip"
     $IP address flush dev $net_device
     $IP addr add $new_ip broadcast $broad dev $net_device
     $IP route add default via $target_router dev $net_device

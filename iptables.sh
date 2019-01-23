@@ -3,8 +3,9 @@
 IPT=$(which iptables)
 MODPROBE=$(which modprobe)
 IP=$(which ip)
+SYSTEMCTL=$(which systemctl)
 
-BACKUP_FILES="/etc/tor/torrc /etc/iptables/iptables.rules /etc/resolv.conf"
+BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
 DIR="$(pwd)"
 FUNCS="$DIR/src/functions"
@@ -15,6 +16,7 @@ source "${FUNCS-:/etc/paranoid/functions}"
 
 [[ -z $IPT ]] && die "iptables no found"
 [[ -z $MODPROBE ]] && die "modprobe no found"
+[[ -z $SYSTEMCTL ]] && die "systemctl no found"
 
 ####################################################
 # Command line parser
@@ -95,7 +97,6 @@ readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
 echo "[+] Update /etc/resolv.conf"
 cat > /etc/resolv.conf << EOF
 nameserver 127.0.0.1
-nameserver ::1
 EOF
 
 ####################################################
@@ -108,12 +109,6 @@ $MODPROBE ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 # No need enable on archlinux
 #sysctl -w net.ipv6.conf.all.disable_ipv6=1
 #sysctl -w net.ipv6.conf.default.disable_ipv6=1
-
-####################################################
-# Start tor
-
-if_tor=$(pgrep -x tor)
-[[ -z $if_tor ]] && systemctl start tor
 
 ####################################################
 # Flushing rules
@@ -163,7 +158,7 @@ $IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
 # Allow tor
 $IPT -A OUTPUT -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
 # Allow loopback output
-$IPT -A OUTPUT -d 127.0.0.1/32 -o lo -j ACCEPT
+$IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -j ACCEPT
 # Tor transproxy magic
 $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
 
@@ -213,3 +208,13 @@ $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
 
 echo "[+] Done"
+
+####################################################
+# Start tor
+
+if_tor=$(pgrep -x tor)
+if [[ -z $if_tor ]] ; then
+  $SYSTEMCTL start tor
+else
+  $SYSTEMCTL restart tor
+fi

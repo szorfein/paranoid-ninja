@@ -17,8 +17,8 @@ CONFIG_DEBUG_WX=y
 
 # Use -fstack-protector-strong (gcc 4.9+) for best stack canary coverage.
 # Prior to v4.18, these are:
-CONFIG_STACKPROTECTOR=y
-CONFIG_STACKPROTECTOR_STRONG=y
+CONFIG_CC_STACKPROTECTOR=y
+CONFIG_CC_STACKPROTECTOR_STRONG=y
 
 # Do not allow direct physical memory access (but if you must have it, at least enable STRICT mode...)
 CONFIG_DEVMEM=n
@@ -58,7 +58,7 @@ CONFIG_SLUB_DEBUG=y
 # Wipe higher-level memory allocations when they are freed (needs "page_poison=1" command line below).
 # (If you can afford even more performance penalty, leave
 CONFIG_PAGE_POISONING=y
-CONFIG_PAGE_POISONING_NO_SANITY=n
+CONFIG_PAGE_POISONING_NO_SANITY=y
 CONFIG_PAGE_POISONING_ZERO=y
 
 # Adds guard pages to kernel stacks (not all architectures support this yet).

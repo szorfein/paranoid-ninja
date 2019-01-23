@@ -1,5 +1,11 @@
 #!/bin/sh
 
+STOP=false
+NFT=$(which nft)
+IPT_RES=$(which iptables-restore)
+XAUTH=$(which xauth)
+CHOWN=$(which chown)
+
 DIR="$(pwd)"
 readonly prog_name="$0"
 
@@ -45,8 +51,6 @@ kernel() {
 # Firewall
 
 firewall() {
-  local firewall
-  firewall=$(grep firewall $CONF | sed "s:firewall=::g"| sed "s:\"::g")
   if [[ $firewall == "nftables" ]] ; then 
     . $DIR/nftables.sh -c $CONF
   elif [[ $firewall == "iptables" ]] ; then
@@ -71,6 +75,26 @@ systemd() {
 }
 
 ######################################################
+# Stop
+
+stopParanoid() {
+  local hostname
+  hostname="$(cat $backup_dir/hostname | head -n 1)"
+  [[ ! -z $hostname ]] && writeHost $hostname
+  restoreFiles
+  systemctl restart tor
+  if [[ $firewall == "nftables" ]] ; then
+    echo "[+] restore old nftables rule"
+    nftReload
+  elif [[ $firewall == "iptables" ]] ; then
+    echo "[+] restore old iptables rule"
+    iptReload
+  else
+    echo "[-] no firewall $firewall found."
+  fi
+}
+
+######################################################
 # Show menu
 
 menu() {
@@ -88,11 +112,15 @@ menu() {
 
   printf "${green}%s${endc}\\n" \
     "-c, --config    Apply your config file, required for some commands"
-  echo "usage: $0 [-c paranoid.con]"
+  echo "usage: $0 [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
     "-s, --systemd    Install systemd script"
   echo "usage: $0 [-s] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-h, --halt    Stop and restore your files"
+  echo "usage: $0 [-h] [-c paranoid.conf]"
 
   printf "${green}%s\n%s\n%s${endc}\n" \
     "----------------------------" \
@@ -131,7 +159,12 @@ while [ "$#" -gt 0 ] ; do
       ;;
     -c | --config)
       CONF="$2"
+      checkConfigFile "$2"
       shift
+      shift
+      ;;
+    -h | --halt)
+      STOP=true
       shift
       ;;
     -v | --version)
@@ -164,4 +197,8 @@ fi
 
 if [[ $SYSTEMD ]] && [[ $CONF ]] ; then
   systemd
+fi
+
+if [[ $STOP == true ]] && [[ $CONF ]] ; then
+  stopParanoid
 fi

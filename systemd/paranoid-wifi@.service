@@ -3,14 +3,14 @@ Description="Randomize MAC, localtime, ip on %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
 After=network.target nss-lookup.target
 Wants=wpa_supplicant@%i.service
-Requires=tor.service
-TimeoutSec=30
+#Requires=tor.service
 
 [Service]
 ExecStart=/usr/lib/systemd/scripts/paranoid -r -c /etc/paranoid/paranoid.conf
 ExecReload=/usr/lib/systemd/scripts/paranoid -r -c /etc/paranoid/paranoid.conf
 ExecStop=/usr/lib/systemd/scripts/paranoid --stop
 RemainAfterExit=yes
+TimeoutSec=30
 Type=oneshot
 
 [Install]

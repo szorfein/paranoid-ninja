@@ -16,8 +16,6 @@ randomize() {
 
 stopParanoid() {
   # TODO: reinstall all files in backup dir
-  local firewall
-  firewall=$(grep firewall /etc/paranoid/paranoid.conf | sed "s:firewall=::g"| sed "s:\"::g")
   if [[ $firewall == "nftables" ]] ; then
     $NFT flush ruleset
   elif [[ $firewall == "iptables" ]] ; then
@@ -44,6 +42,7 @@ while [ "$#" -gt 0 ] ; do
       ;;
     -c | --config)
       CONF="$2"
+      checkConfigFile "$2"
       shift
       shift
       ;;

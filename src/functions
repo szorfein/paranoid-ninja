@@ -69,3 +69,130 @@ backupFiles() {
     echo "[*] backup_dir is unset from config file, skip"
   fi
 }
+
+cpy() {
+  local file dir
+  file="$1"
+  dir="$2"
+  if [[ -f $file ]] || [[ -d $file ]] ; then
+    echo "[+] cp -a $file $dir"
+  fi
+}
+
+restoreFiles() {
+  local dir f
+  dir=$backup_dir
+  [[ -z $dir ]] && die "$dir no found"
+  cpy $dir/grub /etc/default/grub
+  cpy $dir/hostname /etc/default/hostname
+  cpy $dir/hosts /etc/hosts
+  cpy $dir/resolv.conf /etc/resolv.conf
+  cpy $dir/rules-save /var/lib/nftables/rules-save
+  cpy $dir/sysctl.conf /etc/sysctl.conf
+  cpy $dir/torrc /etc/tor/torrc
+  cpy $dir/.config /usr/src/linux-4.19.9-gentoo/.config
+  cpy $dir/.ssh $ssh_dir
+  for f in $other_host_files ; do
+    cpy $dir/${f##*/} $f
+  done
+}
+
+#######################################################
+# Firewall
+
+nftReload() {
+  local files f
+  files="/var/lib/iptables/rules-save /var/lib/iptables/rules-save"
+  for f in $files ; do
+    [[ -f $f ]] &&
+      $NFT flush ruleset ';' include '"/etc/nftables.conf"'
+  done
+}
+
+iptReload() {
+  local files f
+  files="/var/lib/iptables/rules-save /etc/iptables/iptables.rules"
+  for f in $files ; do
+    [[ -f $f ]] &&
+      $IPT_RES $f
+  done
+}
+
+#######################################################
+# Hostname
+
+# Write the new hostname in file from $other_host_files
+otherHostFiles() {
+  local f rule
+  rule="$1"
+  if [ $other_host_files ] ; then
+    for f in $other_host_files ; do
+      [[ -f $f ]] &&
+        sed -i "$rule" $f
+    done
+  fi
+}
+
+# forXorg, avoid error like display no found
+# http://ubuntuhandbook.org/index.php/2016/06/change-hostname-ubuntu-16-04-without-restart/
+forXorg() {
+  local xorg_new xorg_old old_host rule x y z com user
+  old_host=$1
+  rule=$2
+  echo "call with old $1 , rule $2"
+  [[ -z $XAUTH ]] && die "xauth is no found, plz install"
+  if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
+    com="$XAUTH -f $xauthority_file"
+    xorg_new="$($com list | grep $old_host | sed "$rule")"
+    x=$(echo $xorg_new | awk '{print $1}')
+    y=$(echo $xorg_new | awk '{print $2}')
+    z=$(echo $xorg_new | awk '{print $3}')
+    xorg_old="$($com list | grep $old_host | awk '{print $1}')"
+    user=$(echo ${xauthority_file%/*} | sed s:/home/::g)
+    echo "[*] changed hostname with xauth"
+
+    # ex: xauth add "blackhole-opsbm4pvto/unix:0" MIT-MAGIC-COOKIE-1  240a406abe7fac0a35bbe1cb58e09c18
+    $($com add "$x" $y $z)
+
+    # ex: xauth remove "blackhole-opsbm4pvto/unix:0"
+    $($com remove "$xorg_old")
+
+    # fix permission
+    $CHOWN $user:$user $xauthority_file
+  else
+    echo "[*] $xauthority_file no found, skip"
+  fi
+}
+
+# exec if ssh_dir is set from conf file.
+forSSH() {
+  local old_host file files rule
+  old_host="$1"
+  rule="$2"
+  if [ $ssh_dir ] ; then
+    files=$(find $ssh_dir -type f | xargs grep $old_host | awk '{print $1}')
+    echo "ssh file found $files"
+    for file in ${files%:*} ; do
+      sed -i "$rule" $file || die "sed in $file"
+      echo "[*] change host in $file"
+    done
+  fi
+}
+
+# Write new value of hostname in multiple files
+writeHost() {
+  local new old file files rule xorg
+  # check if Xorg running
+  xorg="$(pgrep -x Xorg)"
+  # /etc/hostname
+  new="$1"
+  old="$(cat /etc/hostname | head -n 1)"
+  files="/etc/hostname /etc/hosts"
+  rule="s:$old:$new:g"
+  for file in $files ; do
+    sed -i "$rule" $file || die "sed 1"
+  done
+  forSSH "$old" "$rule"
+  [[ ! -z $xorg ]] && forXorg "$old" "$rule"
+  otherHostFiles "$rule"
+}

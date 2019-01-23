@@ -1,7 +1,7 @@
 #!/bin/sh
 
-SOURCE_DIR=/usr/src/linux-4.19.9-gentoo
-#SOURCE_DIR=/usr/src/linux
+#SOURCE_DIR=/usr/src/linux-4.19.9-gentoo
+SOURCE_DIR="/usr/src/linux"
 SOURCE_CONF="$SOURCE_DIR/.config"
 
 DIR=$(pwd)

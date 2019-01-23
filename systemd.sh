@@ -105,6 +105,15 @@ for s in $SCRIPTS ; do
 done
 
 ######################################################
+# Mask redundant service
+
+# Mask firewall because scripts generate news rule 
+# each times, some service back if only disabled
+systemctl mask nftables
+systemctl mask nftables-restore
+systemctl mask iptables
+
+######################################################
 # Advice 
 
 echo "[*] For ethernet card: systemctl start paranoid@enp3s0"
