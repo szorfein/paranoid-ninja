@@ -39,7 +39,7 @@ randTimezone() {
   [[ -s $LOCALTIME ]] && rm $LOCALTIME
   ln -s $rand1 $LOCALTIME
   ${HWC} --systohc || die "hwclock fail"
-  echo "[*] Changed timezone ${old##*/} from ${rand1##*/}"
+  echo "[+] Changed timezone ${old##*/} from ${rand1##*/}"
 }
 
 #######################################################
@@ -53,7 +53,7 @@ randHost() {
   fi
   rw=$(tr -dc 'a-z0-9' < /dev/urandom | head -c10)
   new+="$rw"
-  echo "[*] Apply new hostname $new"
+  echo "[+] Apply a new hostname $new"
   writeHost $new
   $HOSTNAME $new || die "hostname fail"
 }
@@ -80,7 +80,7 @@ changeMac() {
     sleep 1
     $IP link set dev $net_device up
     sleep 1
-    echo "[*] Changed mac $old to $mac"
+    echo "[+] Changed MAC $old to $mac"
     $SYS restart tor
   else
     echo "[*] Dev $net_device no found, update the config file"
@@ -107,7 +107,6 @@ changeIp() {
 
   if [[ $static ]] && [[ $static == "random" ]] ; then
     randnb=$(rand)
-    echo "[*] create a random ip with $randnb"
   elif [[ $static ]] ; then
     new_ip=$static/${network#*/}
     echo "[*] configure addr with $static"
@@ -121,7 +120,7 @@ changeIp() {
   valid=$($IPCALC $new_ip | grep -i invalid)
   if [[ -z $valid ]] ; then
     #echo "Router is $target_router/${network#*/}"
-    echo "[+] Apply new ip: $new_ip"
+    echo "[+] Apply your new IP addr: $new_ip"
     $IP address flush dev $net_device
     $IP addr add $new_ip broadcast $broad dev $net_device
     $IP route add default via $target_router dev $net_device

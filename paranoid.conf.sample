@@ -28,7 +28,7 @@ want_dhcpcd="no"
 
 # Static ip
 # You can choose "random" or set an real ip
-# ex: static="192.168.1.111" do not add a submask
+# ex: static="192.168.1.111" do not add a subnet
 static="random"
 
 # Firewall used

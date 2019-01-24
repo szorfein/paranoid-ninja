@@ -118,7 +118,6 @@ sysctl -w net.ipv6.conf.default.disable_ipv6=1
 # Process start
 
 echo "[+] Flushing existing rules..."
-sleep 2
 $NFT flush ruleset
 sleep 2
 
@@ -142,15 +141,16 @@ addInet() {
   $NFT add rule inet filter "$@"
 }
 
+echo "[+] Setting up $firewall rules ..."
+
 ########################################################
 # INPUT CHAIN
 
-echo "[+] Setting up INPUT chain..."
 
 # tracking rules
 addInet input ct state invalid log prefix \"DROP INVALID \"
 addInet input ct state invalid counter drop
-addInet input ct state established counter accept
+addInet input ct state established,related counter accept
 
 # Anti spoofing
 addInet input iif $IF ip saddr != $INT_NET log prefix \"SPOOFED PKT \"
@@ -166,12 +166,10 @@ addInet input iif != lo log prefix \"DROP \"
 ########################################################
 # OUTPUT
 
-echo "[+] Setting up OUTPUT chain..."
-
 # Tracking rules
 addInet output ct state invalid log prefix \"DROP INVALID \"
 addInet output ct state invalid counter drop
-addInet output ct state established counter accept
+addInet output ct state established,related counter accept
 
 # Allow Tor process output
 addInet output oifname $IF skuid $tor_uid "tcp flags & (fin|syn|rst|ack) == syn" ct state new counter accept
@@ -197,11 +195,9 @@ addInet output oifname != lo log prefix \"DROP \"
 ########################################################
 # FORWARD CHAIN
 
-echo "[+] Setting up FORWARD chain..."
-
 addInet forward ct state invalid log prefix \"FORWARD INVALID \"
-addInet forward ct state invalid drop
-addInet forward ct state established,related accept
+addInet forward ct state invalid counter drop
+addInet forward ct state established,related counter accept
 
 # Anti-spoofing rules
 addInet forward iifname $IF ip saddr != $INT_NET log prefix \"SPOOFED PKT \"
@@ -212,8 +208,6 @@ addInet forward iifname != lo log prefix \"DROP \"
 
 ########################################################
 # NAT CHAIN
-
-echo "[+] Setting up NAT rules..."
 
 # Transparent proxy with TOR 
 # doc: https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy
@@ -248,7 +242,7 @@ $NFT add rule nat output counter ip protocol udp redirect to $trans_port
 # BLOCK IP
 # echo "[+] Setting up blocking IPS..."
 
-echo "[+] done"
+echo "[+] Done"
 
 #######################################################
 # Start tor
