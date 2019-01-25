@@ -40,14 +40,7 @@ echo "[*] Found interface $IF and your ip $INT_NET"
 ######################################################
 # Check Tor id
 
-id -u debian-tor > /dev/null 2>&1
-[[ $? -eq 0 ]] && tor_uid=$(id -u debian-tor)
-
-id -u tor > /dev/null 2>&1
-[[ $? -eq 0 ]] && tor_uid=$(id -u tor)
-
-[[ -z $tor_uid ]] && die "tor_uid no found"
-echo "[*] Found tor uid = $tor_uid"
+tor_uid=$(searchTorUid)
 
 #####################################################
 # Backups your files

@@ -102,10 +102,10 @@ restoreFiles() {
 
 nftReload() {
   local files f
-  files="/var/lib/iptables/rules-save /var/lib/iptables/rules-save"
+  files="/var/lib/nftables/rules-save /etc/nftables.conf"
   for f in $files ; do
     [[ -f $f ]] &&
-      $NFT flush ruleset ';' include '"/etc/nftables.conf"'
+      $NFT flush ruleset ';' include '"$f"'
   done
 }
 
@@ -116,6 +116,18 @@ iptReload() {
     [[ -f $f ]] &&
       $IPT_RES $f
   done
+}
+
+searchTorUid() {
+  local tor_uid
+  id -u debian-tor > /dev/null 2>&1
+  [[ $? -eq 0 ]] && tor_uid=$(id -u debian-tor)
+
+  id -u tor > /dev/null 2>&1
+  [[ $? -eq 0 ]] && tor_uid=$(id -u tor)
+
+  [[ -z $tor_uid ]] && die "tor_uid no found"
+  echo $tor_uid
 }
 
 #######################################################

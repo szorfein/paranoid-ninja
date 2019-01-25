@@ -137,6 +137,19 @@ applyGrubCmdArgs() {
   sed -i "s:$line:$only_args:g" $grub_conf
 }
 
+forTheEnd() {
+  echo "[+] File $FILE has been apply"
+  echo "You should probably in order: "
+  echo -e "\n[re]compile your kernel source:"
+  echo "ex -> make && make modules_install && make install"
+  echo -e "\n[re]install your modules if gentoo:"
+  echo "ex -> emerge --ask @module-rebuild"
+  echo -e "\n[re]make your initramfs"
+
+  echo -e "\n[re]do a grub.conf:"
+  echo "ex -> grub-mkconfig -o /boot/grub/grub.cfg"
+}
+
 #########################################################
 # Command line parser
 
@@ -213,5 +226,5 @@ fi
 #echo -e "\n[*] Clean kernel config." 
 #make mrproper >/dev/null
 
-echo -e "\n[*] $FILE has beed apply" 
+forTheEnd
 exit 0
