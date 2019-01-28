@@ -15,7 +15,6 @@ The wifi daemon require `wpa_supplicant`.
 TODO List:
 + stop the web browser, clean cache, and restore
 + create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] ?
-+ Test if the connection via tor work with script
 + Add an option to print firewall log or not
 
 # Dependencies

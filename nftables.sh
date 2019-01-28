@@ -235,8 +235,6 @@ $NFT add rule nat output ip protocol udp counter redirect to $trans_port
 # BLOCK IP
 # echo "[+] Setting up blocking IPS..."
 
-echo "[+] Done"
-
 #######################################################
 # Start tor
 

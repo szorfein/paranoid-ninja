@@ -52,6 +52,8 @@ firewall() {
   else
     die "$firewall Not a valid firewall"
   fi
+  sleep 2
+  testTor
 }
 
 ######################################################
@@ -59,6 +61,7 @@ firewall() {
 
 randomize() {
   . $DIR/randomize.sh -c $CONF
+  testTor
 }
 
 ######################################################
@@ -86,6 +89,8 @@ stopParanoid() {
     echo "[-] no firewall $firewall found."
   fi
   systemctl restart tor
+  sleep 1
+  testTor
 }
 
 ######################################################

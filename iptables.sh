@@ -213,8 +213,6 @@ $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT 
 $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 
-echo "[+] Done"
-
 ####################################################
 # Start tor
 
