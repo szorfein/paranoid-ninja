@@ -1,0 +1,13 @@
+[Unit]
+Description=MAC Address Change %I
+Wants=network-pre.target
+Before=network-pre.target
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/systemd/scripts/paranoid -m -c /etc/paranoid/paranoid-mac.conf
+
+[Install]
+WantedBy=multi-user.target

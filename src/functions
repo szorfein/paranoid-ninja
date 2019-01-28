@@ -221,14 +221,12 @@ checkIp() {
 
   ip_1=$(curl -s -m 10 https://ipinfo.io)
   ip_2=$(curl -s -m 10 https://ip-api.com)
-
   if external_ip="$ip_1" || external_ip="$ip_2" ; then
-
-  printf "%s\\n" "$external_ip" | tr -d '"{}' | sed 's/ //g'
-else
-  printf "%s\\n" "[ failed ] curl: HTTP request error"
-  exit 1
-fi
+    printf "%s\\n" "$external_ip" | tr -d '"{}' | sed 's/ //g'
+  else
+    printf "%s\\n" "[ failed ] curl: HTTP request error"
+    exit 1
+  fi
 }
 
 testTor() {

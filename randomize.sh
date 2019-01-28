@@ -12,6 +12,8 @@ SHUF=$(which shuf)
 TOR=$(which tor)
 HEXDUMP=$(which hexdump)
 DD=$(which dd)
+TR=$(which tr)
+HEAD=$(which head)
 
 LOCALTIME=/etc/localtime
 BACKUP_FILES="/etc/hosts /etc/hostname"
@@ -51,7 +53,7 @@ randHost() {
     r="${prefix_hostname[RANDOM % ${#prefix_hostname[@]}]}"
     new="$r-"
   fi
-  rw=$(tr -dc 'a-z0-9' < /dev/urandom | head -c10)
+  rw=$($TR -dc 'a-z0-9' < /dev/urandom |$HEAD -c10)
   new+="$rw"
   echo "[+] Apply a new hostname $new"
   writeHost $new
@@ -122,10 +124,12 @@ changeIp() {
     #echo "Router is $target_router/${network#*/}"
     echo "[+] Apply your new IP addr: $new_ip"
     $IP address flush dev $net_device
+    sleep 1
     $IP addr add $new_ip broadcast $broad dev $net_device
+    sleep 1
     $IP route add default via $target_router dev $net_device
     # restart the firewall
-    sleep 2
+    sleep 1
     [[ $firewall == "nftables" ]] && . $DIR/nftables.sh -c $CONF
     [[ $firewall == "iptables" ]] && . $DIR/iptables.sh -c $CONF
   else

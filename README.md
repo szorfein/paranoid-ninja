@@ -65,13 +65,26 @@ And change at least the value of `net_device=`, `target_router=` and the firewal
 ```txt
 [+] Apply a new hostname comet-8y1e0r1gh5
 [*] change host in /home/ninja/.ssh/known_hosts
+[*] change host in /home/ninja/.ssh/authorized_keys
 [*] changed hostname with xauth
-[+] Changed timezone Tijuana from Central
+[+] Changed timezone Aden from Phoenix
 [+] Changed mac af:2f:ba:15:be:13 to 1C:92:01:6a:13:FB
 [+] Apply your new IP addr: 192.168.1.20/24
 [*] Found interface wlp2s0 and your ip 192.168.1.20/24
+[+] Update /etc/resolv.conf
 [+] Flushing existing rules...
 [+] Settings up nftables rules ...
-[+] Done
 [*] Relaunch your web browser is recommended
+[+] Tor is working properly
+==> Checking your public IP, please wait...
+
+ip:101.123.115.30,
+hostname:tor47.quintex.com,
+city:SanAngelo,
+region:Texas,
+country:US,
+loc:31.5468,-100.5610,
+postal:76901,
+phone:325,
+org:AS62744QuintexAllianceConsulting
 ```

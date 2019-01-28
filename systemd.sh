@@ -5,7 +5,7 @@ SYSTEMD_SCRIPT=/usr/lib/systemd/scripts
 DIR=$(pwd)
 
 SCRIPTS="paranoid"
-SERVICES="paranoid@.service paranoid-wifi@.service"
+SERVICES="paranoid@.service paranoid-wifi@.service paranoid-macspoof@.service"
 
 FUNCS="$DIR/src/functions"
 source "${FUNCS-:/etc/paranoid/functions}"
@@ -16,6 +16,7 @@ DEP_NO_OK=false
 # check deps
 DEPS="which systemctl hwclock hostname xauth chown"
 DEPS+=" ip ipcalc shuf tor dhcpcd tr hexdump dd modprobe"
+DEPS+=" head"
 DEPS_FILE="/dev/urandom"
 
 #######################################################
@@ -84,6 +85,34 @@ install -m0744 $DIR/src/functions $install_path/
 echo "[*] functions installed"
 
 ######################################################
+# Create a config file for the MAC service
+
+file="$CONF"
+rand=$(grep -e "^randomize" $file)
+if_mac=$(echo $rand | grep mac)
+
+createMACConf() {
+  local new_conf if_true
+  new_conf="$install_path/paranoid-mac.conf"
+  if_true=$1
+  if [ $if_true == true ] ; then
+    echo 'randomize=( "mac" )' > $new_conf
+  else
+    echo 'randomize=()' > $new_conf
+  fi
+  grep -e "^net_device" $file >> $new_conf
+  grep -e "^firewall" $file >> $new_conf
+  echo "[+] new conf MAC created"
+}
+
+if [[ ! -z $if_mac ]] ; then
+  createMACConf true
+  sed -i "s:\"mac\" ::g" $install_path/paranoid.conf
+else
+  createMACConf false
+fi
+
+######################################################
 # Patch systemd script
 
 # patch systemd script with real command path rather than use which
@@ -98,7 +127,7 @@ for s in $SCRIPTS ; do
     comm=$(which $l)
     rule="s:\$(which $l):$comm:g"
     sed -i "$rule" $SYSTEMD_SCRIPT/$s
-    sed -i "s:\$DIR/src/functions:/etc/paranoid/functions:g" $SYSTEMD_SCRIPT/$s
+    sed -i "s:\$DIR/src:$install_path:g" $SYSTEMD_SCRIPT/$s
     sed -i "s:\$DIR/nftables.sh:$SYSTEMD_SCRIPT/nftables.sh:g" $SYSTEMD_SCRIPT/$s
     echo "[*] patch file $s, with rule = $rule"
   done
