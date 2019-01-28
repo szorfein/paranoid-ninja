@@ -41,13 +41,6 @@ banner() {
 }
 
 ######################################################
-# Kernel
-
-kernel() {
-  . $DIR/kernel.sh -a "$KERNEL" -c $CONF
-}
-
-######################################################
 # Firewall
 
 firewall() {
@@ -82,7 +75,6 @@ stopParanoid() {
   hostname="$(cat $backup_dir/hostname | head -n 1)"
   [[ ! -z $hostname ]] && writeHost $hostname
   restoreFiles
-  systemctl restart tor
   if [[ $firewall == "nftables" ]] ; then
     echo "[+] restore old nftables rule"
     nftReload
@@ -92,16 +84,13 @@ stopParanoid() {
   else
     echo "[-] no firewall $firewall found."
   fi
+  systemctl restart tor
 }
 
 ######################################################
 # Show menu
 
 menu() {
-  printf "${green}%s${endc}\n" \
-    "-k, --kernel    Apply [FEAT] to your kernel source. Default is /usr/src/linux"
-  echo "usage: $0 [-k FEAT] [-c paranoid.conf]"
-
   printf "${green}%s${endc}\\n" \
     "-t, --transparent-tor    Transparent-torrify on nftables or iptables"
   echo "usage: $0 [-t] [-c paranoid.conf]"
@@ -119,12 +108,8 @@ menu() {
   echo "usage: $0 [-s] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-h, --halt    Stop and restore your files"
-  echo "usage: $0 [-h] [-c paranoid.conf]"
-
-  printf "${green}%s\n%s\n%s${endc}\n" \
-    "----------------------------" \
-    "[FEAT] are into kernel/* (harden, nftables)"
+    "-d, --delete    Stop and restore your files"
+  echo "usage: $0 [-d] [-c paranoid.conf]"
 }
 
 ######################################################
@@ -140,11 +125,6 @@ banner
 
 while [ "$#" -gt 0 ] ; do
   case "$1" in
-    -k | --kernel)
-      KERNEL="$2"
-      shift
-      shift
-      ;;
     -t | --transparent-proxy)
       FIREWALL=true
       shift
@@ -163,7 +143,7 @@ while [ "$#" -gt 0 ] ; do
       shift
       shift
       ;;
-    -h | --halt)
+    -d | --delete)
       STOP=true
       shift
       ;;
@@ -182,10 +162,6 @@ while [ "$#" -gt 0 ] ; do
       ;;
   esac
 done
-
-if [[ $KERNEL ]] && [[ $CONF ]] ; then
-  kernel
-fi
 
 if [[ $FIREWALL == true ]] && [[ $CONF ]] ; then
   firewall

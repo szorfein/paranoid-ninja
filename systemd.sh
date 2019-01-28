@@ -63,24 +63,24 @@ done
 
 s="$DIR/systemd"
 for script in $SCRIPTS ; do
-  install -m 755 "$s/$script" $SYSTEMD_SCRIPT/
+  install -m0744 "$s/$script" $SYSTEMD_SCRIPT/
   echo "[*] $script installed"
 done
 
 for service in $SERVICES ; do
-  install -m 755 "$s/$service" $SYSTEMD_SERVICE/
+  install -m0644 "$s/$service" $SYSTEMD_SERVICE/
   echo "[*] $service installed"
 done
 
-install -m 755 "$DIR/nftables.sh" $SYSTEMD_SCRIPT/
+install -m0744 "$DIR/nftables.sh" $SYSTEMD_SCRIPT/
 echo "[*] nftables.sh installed"
-install -m 755 "$DIR/iptables.sh" $SYSTEMD_SCRIPT/
+install -m0744 "$DIR/iptables.sh" $SYSTEMD_SCRIPT/
 echo "[*] iptables.sh installed"
-install -m 755 "$DIR/randomize.sh" $SYSTEMD_SCRIPT/
+install -m0744 "$DIR/randomize.sh" $SYSTEMD_SCRIPT/
 echo "[*] randomize.sh installed"
-install -m 755 $CONF $install_path/paranoid.conf
+install -m0644 $CONF $install_path/paranoid.conf
 echo "[*] paranoid.conf installed"
-install -m 755 $DIR/src/functions $install_path/
+install -m0744 $DIR/src/functions $install_path/
 echo "[*] functions installed"
 
 ######################################################

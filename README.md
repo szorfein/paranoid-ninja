@@ -2,18 +2,11 @@
 
 # about 
 
-A script to protect your privacy and your system.    
-Randomize the MAC address, localtime, private ip, transparent-torrify with nftables or iptables and patch the kernel with harden feature used by [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings).
-
-The project is split into several parts:
-
-### Kernel
-It's an optionnal part, apply some configuration used by [ClipOS](https://docs.clip-os.org/clipos/kernel.html) and [KernSec](https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings). 
-
-Modify your kernel parameters via sysctl.conf and grub 2 if you use, all the modified flags can be look in file `kernel/sysctl.txt` and `kernel/grub.txt`.  
+A script to protect your privacy.  
+Randomize the MAC address, localtime, private ip and apply a Transparent proxy through Tor with nftables or iptables.  
 
 ### Firewall
-Add a basic and secure firewall with log and transparent torrify with TOR, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials). 
+Add a basic and secure firewall with log and TOR, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials). 
 
 ### Systemd
 The daemon work with systemd, i created a service for ethernet and wifi card.  
@@ -22,7 +15,7 @@ The wifi daemon require `wpa_supplicant`.
 TODO List:
 + create an option --stop --halt or --clean
 + stop the web browser, clean cache, and restore
-+ create an ssh tunnel socks5 to connect tor via Socks5Proxy Or look for use sshuttle ?
++ create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] ?
 + Test if the connection via tor work with script
 + Add an option to print firewall log or not
 

@@ -104,8 +104,8 @@ EOF
 #######################################################
 # Disable ipv6 
 
-sysctl -w net.ipv6.conf.all.disable_ipv6=1
-sysctl -w net.ipv6.conf.default.disable_ipv6=1
+#sysctl -w net.ipv6.conf.all.disable_ipv6=1
+#sysctl -w net.ipv6.conf.default.disable_ipv6=1
 
 #######################################################
 # Process start
@@ -138,7 +138,6 @@ echo "[+] Setting up $firewall rules ..."
 
 ########################################################
 # INPUT CHAIN
-
 
 # tracking rules
 addInet input ct state invalid log prefix \"DROP INVALID \"
@@ -173,14 +172,13 @@ addInet output ip daddr 127.0.0.1/32 oifname lo counter accept
 # Tor transproxy magic
 addInet output ip daddr 127.0.0.1/32 tcp dport $trans_port "tcp flags & (fin|syn|rst|ack) == syn" counter accept
 
-addInet output skuid $tor_uid counter accept
-addInet output tcp dport 9001 ct state new counter accept
-addInet output ip protocol icmp icmp type echo-request accept
+#addInet output skuid $tor_uid counter accept
+addInet output ip protocol icmp icmp type echo-request counter accept
 
 # Torrents
 # Ex config with aria2c contain:
 # listen-port = 6881-6886 | dht-listen-port = 6881-6886
-addInet output oifname $IF udp sport 6881-6886 counter accept
+#addInet output oifname $IF udp sport 6881-6886 counter accept
 
 # Default output log rule
 addInet output oifname != lo log prefix \"DROP \"
@@ -204,18 +202,20 @@ addInet forward iifname != lo log prefix \"DROP \"
 
 # Transparent proxy with TOR 
 # doc: https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy
-$NFT add rule nat output oifname lo udp dport 53 counter redirect to $dns_port
+$NFT add rule nat output skuid $tor_uid counter return
+$NFT add rule nat output udp dport 53 counter redirect to $dns_port
+$NFT add rule nat output skuid $tor_uid udp dport 53 counter redirect to $dns_port
+
 $NFT add rule nat output counter ip protocol tcp ip daddr $virt_tor redirect to $trans_port
 $NFT add rule nat output counter ip protocol udp ip daddr $virt_tor redirect to $trans_port
 
 # Do not torrify torrent
-$NFT add rule nat output oifname $IF udp sport 6881-6886 counter return
+#$NFT add rule nat output oifname $IF udp sport 6881-6886 counter return
+#$NFT add rule nat output ip protocol tcp ip daddr != 127.0.0.1/32 skuid != $tor_uid counter dnat to "127.0.0.1:$trans_port"
+#$NFT add rule nat output ip daddr != 127.0.0.1/32 skuid != $tor_uid udp dport 53 counter dnat to "127.0.0.1:$dns_port"
 
 # Don't nat the tor process on local network
 $NFT add rule nat output oifname lo counter return
-$NFT add rule nat output skuid $tor_uid counter return
-# I have to enable the line bellow cause skuid tor seem not work sometimes.
-$NFT add rule nat output tcp dport 9001 counter return
 
 # allow lan access
 for _lan in $non_tor; do
@@ -228,8 +228,8 @@ done
 
 # Redirect all other output to TOR
 $NFT add rule nat output "tcp flags & (fin|syn|rst|ack) == syn" counter redirect to $trans_port
-$NFT add rule nat output counter ip protocol icmp redirect to $trans_port
-$NFT add rule nat output counter ip protocol udp redirect to $trans_port
+$NFT add rule nat output ip protocol icmp counter redirect to $trans_port
+$NFT add rule nat output ip protocol udp counter redirect to $trans_port
 
 ########################################################
 # BLOCK IP

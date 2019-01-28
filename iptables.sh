@@ -107,8 +107,8 @@ $MODPROBE ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 
 # Disable ipv6
 # No need enable on archlinux
-sysctl -w net.ipv6.conf.all.disable_ipv6=1
-sysctl -w net.ipv6.conf.default.disable_ipv6=1
+#sysctl -w net.ipv6.conf.all.disable_ipv6=1
+#sysctl -w net.ipv6.conf.default.disable_ipv6=1
 
 ####################################################
 # Flushing rules
@@ -151,20 +151,19 @@ $IPT -A OUTPUT -m state --state INVALID -j DROP
 $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Accept rules out
-$IPT -A OUTPUT -o lo -j ACCEPT
+#$IPT -A OUTPUT -o lo -j ACCEPT
 $IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
 
 # Allow Tor process output
 $IPT -A OUTPUT -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
 
 # Allow loopback output
-$IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -j ACCEPT
+$IPT -A OUTPUT -o lo -d 127.0.0.1/32 -j ACCEPT
 
 # Tor transproxy magic
 $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
 
-$IPT -A OUTPUT -m owner --uid-owner $tor_uid -j ACCEPT
-$IPT -A OUTPUT -p tcp -m tcp --dport 9001 -m state --state NEW -j ACCEPT
+#$IPT -A OUTPUT -m owner --uid-owner $tor_uid -j ACCEPT
 $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 
 # Default output log rule
@@ -190,14 +189,15 @@ $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-o
 ####################################################
 # NAT chain
 
+$IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
 $IPT -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $dns_port
+$IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIRECT --to-ports $dns_port
+
 $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
 
 # Don't nat the tor process on local network
-$IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
 $IPT -t nat -A OUTPUT -o lo -j RETURN
-$IPT -t nat -A OUTPUT -p tcp --dport 9001 -j RETURN
 
 # Allow lan access for non_tor 
 for lan in $non_tor 127.0.0.0/9 127.128.0.0/10; do
@@ -210,8 +210,8 @@ done
 
 # Redirect all other output to TOR
 $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
-$IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
+$IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 
 echo "[+] Done"
 
