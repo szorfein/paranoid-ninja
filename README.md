@@ -13,7 +13,6 @@ The daemon work with systemd, i created a service for ethernet and wifi card.
 The wifi daemon require `wpa_supplicant`.  
 
 TODO List:
-+ create an option --stop --halt or --clean
 + stop the web browser, clean cache, and restore
 + create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] ?
 + Test if the connection via tor work with script
@@ -49,6 +48,10 @@ Optionnal dependencies are: wpa_supplicant if use a wifi card and dhcpcd if need
 Make a copy of `paranoid.conf.sample`:
 
     # cp -a paranoid.conf.sample paranoid.conf
+
+Change the user:
+
+    # sed -i "s:brakk:your_username:g" paranoid.conf
 
 And change at least the value of `net_device=`, `target_router=` and the firewall used `firewall=`.
 

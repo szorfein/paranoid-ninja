@@ -104,8 +104,10 @@ nftReload() {
   local files f
   files="/var/lib/nftables/rules-save /etc/nftables.conf"
   for f in $files ; do
-    [[ -f $f ]] &&
-      $NFT flush ruleset ';' include '"$f"'
+    if [ -f $f ] ; then
+      $NFT flush ruleset
+      $NFT -f $f
+    fi
   done
 }
 
@@ -113,8 +115,9 @@ iptReload() {
   local files f
   files="/var/lib/iptables/rules-save /etc/iptables/iptables.rules"
   for f in $files ; do
-    [[ -f $f ]] &&
+    if [ -f $f ] ; then
       $IPT_RES $f
+    fi
   done
 }
 
@@ -151,11 +154,12 @@ forXorg() {
   local xorg_new xorg_old old_host rule x y z com user
   old_host=$1
   rule=$2
-  echo "call with old $1 , rule $2"
   [[ -z $XAUTH ]] && die "xauth is no found, plz install"
   if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
     com="$XAUTH -f $xauthority_file"
     xorg_new="$($com list | grep $old_host | sed "$rule")"
+    [[ -z $xorg_new ]] && die "problem to found $old_host at $xauthority_file"
+
     x=$(echo $xorg_new | awk '{print $1}')
     y=$(echo $xorg_new | awk '{print $2}')
     z=$(echo $xorg_new | awk '{print $3}')
@@ -164,10 +168,10 @@ forXorg() {
     echo "[*] changed hostname with xauth"
 
     # ex: xauth add "blackhole-opsbm4pvto/unix:0" MIT-MAGIC-COOKIE-1  240a406abe7fac0a35bbe1cb58e09c18
-    $($com add "$x" $y $z)
+    $com add "$x" $y $z
 
     # ex: xauth remove "blackhole-opsbm4pvto/unix:0"
-    $($com remove "$xorg_old")
+    $com remove "$xorg_old"
 
     # fix permission
     $CHOWN $user:$user $xauthority_file
@@ -183,10 +187,9 @@ forSSH() {
   rule="$2"
   if [ $ssh_dir ] ; then
     files=$(find $ssh_dir -type f | xargs grep $old_host | awk '{print $1}')
-    echo "ssh file found $files"
     for file in ${files%:*} ; do
-      sed -i "$rule" $file || die "sed in $file"
-      echo "[*] change host in $file"
+      sed -i "$rule" ${file%:*} || die "sed in ${file%:*}"
+      echo "[*] change host in ${file%:*}"
     done
   fi
 }
@@ -207,4 +210,5 @@ writeHost() {
   forSSH "$old" "$rule"
   [[ ! -z $xorg ]] && forXorg "$old" "$rule"
   otherHostFiles "$rule"
+  $HOSTNAME $new
 }

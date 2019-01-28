@@ -5,6 +5,7 @@ NFT=$(which nft)
 IPT_RES=$(which iptables-restore)
 XAUTH=$(which xauth)
 CHOWN=$(which chown)
+HOSTNAME=$(which hostname)
 
 DIR="$(pwd)"
 readonly prog_name="$0"
