@@ -67,15 +67,19 @@ changeMac() {
   local mac old lastfive firstbyte
   $IP link show $net_device > /dev/null 2>&1
   if [ $? -eq 0 ] ; then
-    old=$($IP link show $net_device | grep -i ether | awk '{print $2}')
-    mac=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
-    mac+=$(echo -n ""; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
-    # Get solution here to create a valid MAC address:
-    # https://unix.stackexchange.com/questions/279910/how-go-generate-a-valid-and-random-mac-address
-    lastfive=$( echo "$mac" | cut -d: -f 2-6 )
-    firstbyte=$( echo "$mac" | cut -d: -f 1 )
-    firstbyte=$( printf '%02X' $(( 0x$firstbyte & 254 | 2)) )
-    mac="$firstbyte:$lastfive"
+    if [[ $static_mac ]] && [[ $static_mac == "random" ]] ; then
+      old=$($IP link show $net_device | grep -i ether | awk '{print $2}')
+      mac=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
+      mac+=$(echo -n ""; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
+      # Get solution here to create a valid MAC address:
+      # https://unix.stackexchange.com/questions/279910/how-go-generate-a-valid-and-random-mac-address
+      lastfive=$( echo "$mac" | cut -d: -f 2-6 )
+      firstbyte=$( echo "$mac" | cut -d: -f 1 )
+      firstbyte=$( printf '%02X' $(( 0x$firstbyte & 254 | 2)) )
+      mac="$firstbyte:$lastfive"
+    else
+      mac="$static_mac"
+    fi
     $IP link set dev $net_device down
     sleep 1
     $IP link set dev $net_device address $mac
@@ -105,11 +109,11 @@ changeIp() {
   network=$($IPCALC $target_router | grep -i network | awk '{print $2}')
   broad=$($IPCALC $target_router | grep -i broadcast | awk '{print $2}')
 
-  if [[ $static ]] && [[ $static == "random" ]] ; then
+  if [[ $static_ip ]] && [[ $static_ip == "random" ]] ; then
     randnb=$(rand)
-  elif [[ $static ]] ; then
-    new_ip=$static/${network#*/}
-    echo "[*] configure addr with $static"
+  elif [[ $static_ip ]] ; then
+    new_ip=$static_ip/${network#*/}
+    echo "[*] configure addr with $static_ip"
   else
     echo "[Err] no value found from paranoid.conf"
     exit 1

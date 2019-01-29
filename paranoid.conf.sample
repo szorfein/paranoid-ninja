@@ -29,11 +29,16 @@ want_dhcpcd="no"
 # Static ip
 # You can choose "random" or set an real ip
 # ex: static="192.168.1.111" do not add a subnet
-static="random"
+static_ip="random"
 
 # Firewall used
 # Options are nftables or iptables
 firewall="nftables"
+
+# Like static_ip
+# You can create a static address like 11:11:11:11:11:11
+# or random
+static_mac="random"
 
 #########################################################
 # Hostname change

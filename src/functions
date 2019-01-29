@@ -249,11 +249,11 @@ loadTor() {
   local if_tor
   if_tor=$(pgrep -x tor)
   if [[ -z $if_tor ]] ; then
-    $SYSTEMCTL start tor
-    wait ${!}
+    $SYSTEMCTL start tor &
+    wait $!
   else
     echo "[+] Restarting tor ..."
     $SYSTEMCTL restart tor &
-    wait ${!}
+    wait $!
   fi
 }
