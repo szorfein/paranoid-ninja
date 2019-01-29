@@ -6,6 +6,7 @@ IPT_RES=$(which iptables-restore)
 XAUTH=$(which xauth)
 CHOWN=$(which chown)
 HOSTNAME=$(which hostname)
+SYSTEMCTL=$(which systemctl)
 
 DIR="$(pwd)"
 readonly prog_name="$0"
@@ -52,7 +53,7 @@ firewall() {
   else
     die "$firewall Not a valid firewall"
   fi
-  sleep 2
+  loadTor
   testTor
 }
 
@@ -61,6 +62,7 @@ firewall() {
 
 randomize() {
   . $DIR/randomize.sh -c $CONF
+  loadTor
   testTor
 }
 
@@ -88,8 +90,7 @@ stopParanoid() {
   else
     echo "[-] no firewall $firewall found."
   fi
-  systemctl restart tor
-  sleep 1
+  loadTor
   testTor
 }
 

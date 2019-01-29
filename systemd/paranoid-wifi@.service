@@ -1,17 +1,17 @@
 [Unit]
 Description="Randomize MAC, localtime, ip on %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
-After=network.target nss-lookup.target
+After=network.target nss-lookup.target paranoid-macspoof@%i.service
 Wants=wpa_supplicant@%i.service
-Requires=paranoid-macspoof@%i.service
-#Requires=tor.service
+Before=tor.service
+Requires=paranoid-macspoof@%i.service tor.service
 
 [Service]
 ExecStart=/usr/lib/systemd/scripts/paranoid -r -c /etc/paranoid/paranoid.conf
-ExecReload=/usr/lib/systemd/scripts/paranoid -r -c /etc/paranoid/paranoid.conf
+ExecReload=/usr/lib/systemd/scripts/paranoid -R -c /etc/paranoid/paranoid.conf
 ExecStop=/usr/lib/systemd/scripts/paranoid -s -c /etc/paranoid/paranoid.conf
 RemainAfterExit=yes
-TimeoutSec=30
+TimeoutSec=35
 IgnoreSIGPIPE=false
 Type=oneshot
 

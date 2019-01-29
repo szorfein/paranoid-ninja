@@ -79,11 +79,9 @@ changeMac() {
     $IP link set dev $net_device down
     sleep 1
     $IP link set dev $net_device address $mac
-    sleep 1
     $IP link set dev $net_device up
     sleep 1
     echo "[+] Changed MAC $old to $mac"
-    $SYS restart tor
   else
     echo "[*] Dev $net_device no found, update the config file"
   fi
@@ -126,10 +124,8 @@ changeIp() {
     $IP address flush dev $net_device
     sleep 1
     $IP addr add $new_ip broadcast $broad dev $net_device
-    sleep 1
     $IP route add default via $target_router dev $net_device
     # restart the firewall
-    sleep 1
     [[ $firewall == "nftables" ]] && . $DIR/nftables.sh -c $CONF
     [[ $firewall == "iptables" ]] && . $DIR/iptables.sh -c $CONF
   else

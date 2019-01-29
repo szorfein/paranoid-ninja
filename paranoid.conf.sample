@@ -9,7 +9,7 @@ backup_dir=${install_path}/backup
 
 # You can choose what randomize and skip some action
 # Full options are:
-# ("hostname" "timezone" "priv_ip")
+# ("hostname" "timezone" "mac" "priv_ip")
 randomize=( "hostname" "timezone" "mac" "priv_ip" )
 
 #########################################################

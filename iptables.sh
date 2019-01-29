@@ -212,13 +212,3 @@ done
 $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
-
-####################################################
-# Start tor
-
-if_tor=$(pgrep -x tor)
-if [[ -z $if_tor ]] ; then
-  $SYSTEMCTL start tor
-else
-  $SYSTEMCTL restart tor
-fi

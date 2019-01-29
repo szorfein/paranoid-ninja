@@ -1,12 +1,14 @@
 #!/bin/sh
 
 NFT=$(which nft)
+SYSTEMCTL=$(which systemctl)
 SYSTEMD_S="/usr/lib/systemd/scripts"
 readonly prog_name="$0"
 
 RAND=false
 MAC=false
 STOP=false
+RELOAD=false
 
 DIR="$(pwd)"
 FUNCS="$DIR/src/functions"
@@ -44,6 +46,10 @@ while [ "$#" -gt 0 ] ; do
       MAC=true
       shift
       ;;
+    -R | --reload)
+      RELOAD=true
+      shift
+      ;;
     -c | --config)
       CONF="$2"
       checkConfigFile "$2"
@@ -67,6 +73,11 @@ fi
 
 if [[ $RAND == true ]] && [[ $CONF ]] ; then
   . $SYSTEMD_S/randomize.sh -c $CONF
+fi
+
+if [[ $RELOAD == true ]] && [[ $CONF ]] ; then
+  . $SYSTEMD_S/randomize.sh -c $CONF
+  loadTor
 fi
 
 if [[ $STOP == true ]] && [[ $CONF ]] ; then
