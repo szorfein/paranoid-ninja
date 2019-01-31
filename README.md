@@ -1,7 +1,6 @@
 # paranoid-ninja
 
 # about 
-
 A script to protect your privacy.  
 Randomize the MAC address, localtime, private ip and apply a Transparent proxy through Tor with nftables or iptables.  
 
@@ -12,13 +11,14 @@ Add a basic and secure firewall with log and TOR, inspired by project like [TOR 
 The daemon work with systemd, i created a service for ethernet and wifi card.  
 The wifi daemon require `wpa_supplicant`.  
 
-TODO List:
-+ stop the web browser, clean cache, and restore
-+ create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] ?
+## TODO List
++ Write something to uninstall the daemon :)
 + Add an option to print firewall log or not
++ Create a systemd timer service to reload the daemon all the X minutes.
++ Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()
++ Create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] or setup a VPN with wireshark ?
 
 # Dependencies
-
 ### Archlinux
     
     # pacman -S ipcalc tor wget
@@ -32,21 +32,18 @@ And add `iptables` or `nftables`. `wpa_supplicant` if use wifi.
 
 And add `net-firewall/iptables` or `net-firewall/nftables`, `net-wireless/wpa_supplicant` if use wifi.
 
-### Other distrib need
-
-iproute2, shuf, urandom, util-linux, nftables or iptables, systemd, ipcalc.  
-
-Optionnal dependencies are: wpa_supplicant if use a wifi card and dhcpcd if need.
+### Other distribs
+The name of the packages may be different but need:  
+`iproute2`, `shuf`, `urandom`, `util-linux`, `nftables` or `iptables`, `systemd`, `ipcalc`, `wpa_supplicant` if use a wifi card.  
 
 # Install
 
     # git clone https://github.com/szorfein/paranoid-ninja.git
 
 # Configure
-
 Make a copy of `paranoid.conf.sample`:
 
-    # cp -a paranoid.conf.sample paranoid.conf
+    # cp paranoid.conf.sample paranoid.conf
 
 Change the user:
 
