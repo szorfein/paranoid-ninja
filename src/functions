@@ -71,11 +71,12 @@ backupFiles() {
 }
 
 cpy() {
-  local file dir
-  file="$1"
-  dir="$2"
-  if [[ -f $file ]] || [[ -d $file ]] ; then
-    echo "[+] cp -a $file $dir"
+  local src dest
+  src="$1"
+  dest="$2"
+  if [[ -f $src ]] || [[ -d $src ]] ; then
+    echo "[+] cp -a $src $dest"
+    cp -a $src $dest
   fi
 }
 
