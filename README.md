@@ -1,5 +1,5 @@
 # paranoid-ninja
-![demo](https://transfer.sh/lGW1s/paranoid-ninja.png)
+![demo](https://raw.githubusercontent.com/szorfein/paranoid-ninja/master/demo/paranoid-ninja.png)
 
 ## About 
 A script to protect your privacy.  
