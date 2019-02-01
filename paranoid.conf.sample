@@ -1,11 +1,10 @@
 #########################################################
 # Globals options
 
-# usefull if need to install systemd script
-install_path=/etc/paranoid
-
-# Will save your files here
-backup_dir=${install_path}/backup
+# Will save your files here, dont touch that
+# The line is rewritten at each install,
+# Edit the Makefile at BACKUP_DIR if want another value
+backup_dir=$HOME/ninja/backups
 
 # You can choose what randomize and skip some action
 # Full options are:

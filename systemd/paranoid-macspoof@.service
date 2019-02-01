@@ -7,7 +7,7 @@ After=sys-subsystem-net-devices-%i.device
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/systemd/scripts/paranoid -m -c /etc/paranoid/paranoid-mac.conf
+ExecStart=$SYSTEMD_SCRIPT/paranoid -m -c $CONF_DIR/paranoid-mac.conf
 
 [Install]
 WantedBy=multi-user.target

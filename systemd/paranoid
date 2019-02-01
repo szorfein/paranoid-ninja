@@ -2,8 +2,6 @@
 
 NFT=$(which nft)
 SYSTEMCTL=$(which systemctl)
-SYSTEMD_S="/usr/lib/systemd/scripts"
-readonly prog_name="$0"
 
 RAND=false
 MAC=false
@@ -31,11 +29,6 @@ stopParanoid() {
 ######################################################
 # Command options
 
-if [ "$#" -eq 0 ]; then
-    printf "%s\\n" "$prog_name: Argument required"
-    exit 1
-fi
-
 while [ "$#" -gt 0 ] ; do
   case "$1" in
     -r | --randomize)
@@ -61,22 +54,21 @@ while [ "$#" -gt 0 ] ; do
       shift
       ;;
     *)
-      printf "%s\\n" "$prog_name: Invalid option '$1'"
-      exit 1
+      die "%s\\n" "Invalid option '$1'"
       ;;
   esac
 done
 
 if [[ $MAC == true ]] ; then
-  . $SYSTEMD_S/randomize.sh -c $CONF
+  . $LIB_DIR/randomize.sh -c $CONF
 fi
 
 if [[ $RAND == true ]] && [[ $CONF ]] ; then
-  . $SYSTEMD_S/randomize.sh -c $CONF
+  . $LIB_DIR/randomize.sh -c $CONF
 fi
 
 if [[ $RELOAD == true ]] && [[ $CONF ]] ; then
-  . $SYSTEMD_S/randomize.sh -c $CONF
+  . $LIB_DIR/randomize.sh -c $CONF
   loadTor
 fi
 

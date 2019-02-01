@@ -2,15 +2,13 @@
 
 die() {
   printf "${red}%s${white}%s${endc}\n" \
-    "[ Failed ]" " $1"
+    "[-]" " $1"
   exit 1
 }
 
 checkRoot() {
   if [[ "$(id -u)" -ne 0 ]] ; then
-    printf "\\n${red}%s${endc}\\n" \
-      "[ failed ] Please run this program as a root!" 2>&1
-    exit 1
+    die "Please run this program as a root" 2>&1
   fi
 }
 
@@ -87,7 +85,6 @@ restoreFiles() {
   cpy $dir/hostname /etc/default/hostname
   cpy $dir/hosts /etc/hosts
   cpy $dir/resolv.conf /etc/resolv.conf
-  cpy $dir/rules-save /var/lib/nftables/rules-save
   cpy $dir/sysctl.conf /etc/sysctl.conf
   cpy $dir/torrc /etc/tor/torrc
   cpy $dir/.ssh $ssh_dir

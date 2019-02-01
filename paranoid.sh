@@ -11,8 +11,8 @@ SYSTEMCTL=$(which systemctl)
 DIR="$(pwd)"
 readonly prog_name="$0"
 
-FUNCS="${DIR}/src/functions"
-source "${FUNCS-:/etc/paranoid/functions}"
+FUNCS="$DIR/src/functions"
+source "${FUNCS}"
 
 ######################################################
 # Colors

@@ -12,7 +12,6 @@ The daemon work with systemd, i created a service for ethernet and wifi card.
 The wifi daemon require `wpa_supplicant`.  
 
 ## TODO List
-+ Write something to uninstall the daemon :)
 + Add an option to print firewall log or not
 + Create a systemd timer service to reload the daemon all the X minutes.
 + Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()
@@ -38,9 +37,10 @@ The name of the packages may be different but need:
 
 # Install
 
+Clone this repository:
+
     # git clone https://github.com/szorfein/paranoid-ninja.git
 
-# Configure
 Make a copy of `paranoid.conf.sample`:
 
     # cp paranoid.conf.sample paranoid.conf
@@ -51,9 +51,11 @@ Change the user:
 
 And change at least the value of `net_device=`, `target_router=` and the firewall used `firewall=`.
 
+    # make install
+
 # Usage
 
-    # ./paranoid.sh -h
+    # ./paranoid -h
 
 # Demo
 
