@@ -1,6 +1,9 @@
 #!/bin/sh
 
 STOP=false
+STATUS=false
+
+# Bins
 NFT=$(which nft)
 IPT_RES=$(which iptables-restore)
 XAUTH=$(which xauth)
@@ -130,11 +133,11 @@ menu() {
   echo "usage: $0 [-r] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-c, --config    Apply your config file, required for some commands"
+    "-c, --config    Apply your config file, required for all commands"
   echo "usage: $0 [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-s, --systemd    Install systemd script"
+    "-s, --status    Check if tor running and look infos on your ip"
   echo "usage: $0 [-s] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
@@ -159,10 +162,6 @@ while [ "$#" -gt 0 ] ; do
       FIREWALL=true
       shift
       ;;
-    -s | --systemd)
-      SYSTEMD=true
-      shift
-      ;;
     -r | --randomize)
       RAND=true
       shift
@@ -171,6 +170,10 @@ while [ "$#" -gt 0 ] ; do
       CONF="$2"
       checkConfigFile "$2"
       shift
+      shift
+      ;;
+    -s | --status)
+      STATUS=true
       shift
       ;;
     -d | --delete)
@@ -201,10 +204,10 @@ if [[ $RAND ]] && [[ $CONF ]] ; then
   randomize
 fi
 
-if [[ $SYSTEMD ]] && [[ $CONF ]] ; then
-  systemd
-fi
-
 if [[ $STOP == true ]] && [[ $CONF ]] ; then
   stopParanoid
+fi
+
+if [[ $STATUS == true ]] ; then
+  testTor
 fi

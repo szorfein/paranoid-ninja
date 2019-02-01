@@ -55,11 +55,11 @@ And change at least the value of `net_device=`, `target_router=` and the firewal
 
 # Usage
 
-    # ./paranoid -h
+    # paranoid-ninja -h
 
 # Demo
 
-    # ./paranoid -r -c paranoid.conf
+    # paranoid-ninja -r -c /etc/paranoid-ninja/paranoid.conf
 
 ```txt
 [+] Apply a new hostname comet-8y1e0r1gh5
