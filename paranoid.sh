@@ -138,7 +138,7 @@ menu() {
 
   printf "${green}%s${endc}\\n" \
     "-s, --status    Check if tor running and look infos on your ip"
-  echo "usage: $0 [-s] [-c paranoid.conf]"
+  echo "usage: $0 [-s]"
 
   printf "${green}%s${endc}\\n" \
     "-d, --delete    Stop and restore your files"

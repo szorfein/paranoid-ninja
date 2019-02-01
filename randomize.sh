@@ -20,7 +20,7 @@ BACKUP_FILES="/etc/hosts /etc/hostname"
 
 DIR=$(pwd)
 FUNCS="$DIR/src/functions"
-source "${FUNCS-:/etc/paranoid/functions}"
+source "${FUNCS}"
 
 #######################################################
 # Check deps

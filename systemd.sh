@@ -136,7 +136,7 @@ patchFiles() {
       rule="s:\$(which $d):$comm:g"
       sed -i "$rule" $dir/$s
       sed -i "s:\$DIR/src:$LIB_DIR:g" $dir/$s
-      sed -i "s:\$DIR/nftables.sh:$LIB_DIR/nftables.sh:g" $dir/$s
+      sed -i "s:\$DIR:$LIB_DIR:g" $dir/$s
       sed -i "s:\$LIB_DIR:$LIB_DIR:g" $dir/$s
       sed -i "s:\$SYSTEMD_SCRIPT:$SYSTEMD_SCRIPT:g" $dir/$s
       sed -i "s:\$CONF_DIR:$CONF_DIR:g" $dir/$s
