@@ -59,9 +59,12 @@ other_host_files="/home/brakk/.offlineimaprc"
 #########################################################
 # Randomize options
 
-# prefix apply to hostname, e.g: blackhole-63htvnuebl
-# if you doesn't need prefix, change hostname_keywords=()
-prefix_hostname=( "star" "comet" "nebula" "blackhole" "materia" )
+# prefix or suffix apply to hostname, e.g: blackhole-63htvnuebl
+# if you doesn't need prefix or prefix
+# just clean the variable like preix_hostname=() or place a comment
+# The script will choose a prefix or a suffix :)
+prefix_hostname=( "star." "comet-" "nebula-" "blackhole." "android-" )
+suffix_hostname=( "-macbookpro" "-iphone" )
 
 # directory contain all timezone
 timezone_dir=(/usr/share/zoneinfo/*/*)

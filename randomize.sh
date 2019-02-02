@@ -48,13 +48,30 @@ randTimezone() {
 # Randomize the hostname
 
 randHost() {
-  local new r rw
-  if [ $prefix_hostname ] ; then
-    r="${prefix_hostname[RANDOM % ${#prefix_hostname[@]}]}"
-    new="$r-"
+  local rand_what rand_word rand_keyword new all
+  all=( "prefix" "suffix" )
+  rand_word=$($TR -dc 'a-z0-9' < /dev/urandom | $HEAD -c 10)
+  if [[ $prefix_hostname ]] && [[ -z $suffix_hostname ]] ; then
+    rand_what="prefix"
+  elif [[ -z $prefix_hostname ]] && [[ $suffix_hostname ]] ; then
+    rand_what="suffix"
+  else
+    rand_what="${all[RANDOM % ${#all[@]}]}"
   fi
-  rw=$($TR -dc 'a-z0-9' < /dev/urandom |$HEAD -c10)
-  new+="$rw"
+  if [[ $prefix_hostname ]] || [[ $suffix_hostname ]] ; then
+    if [[ $rand_what == "prefix" ]] && [[ ! -z $prefix_hostname ]] ; then
+      rand_keyword="${prefix_hostname[RANDOM % ${#prefix_hostname[@]}]}"
+      new="$rand_keyword$rand_word"
+      #echo "[+] hostname - apply prefix ... $new"
+    else
+      rand_keyword="${suffix_hostname[RANDOM % ${#suffix_hostname[@]}]}"
+      new="$rand_word$rand_keyword"
+      #echo "[+] hostname - apply suffix ... $new"
+    fi
+  else
+    new="$rand_word"
+    #echo "[+] hostname - no suffix or prefix so $new"
+  fi
   echo "[+] Apply a new hostname $new"
   writeHost $new
   $HOSTNAME $new || die "hostname fail"
