@@ -63,7 +63,7 @@ other_host_files="/home/brakk/.offlineimaprc"
 # if you doesn't need prefix or prefix
 # just clean the variable like preix_hostname=() or place a comment
 # The script will choose a prefix or a suffix :)
-prefix_hostname=( "star." "comet-" "nebula-" "blackhole." "android-" )
+prefix_hostname=( "star." "comet." "nebula-" "blackhole-" "android-" )
 suffix_hostname=( "-macbookpro" "-iphone" )
 
 # directory contain all timezone

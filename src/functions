@@ -177,17 +177,22 @@ forXorg() {
 }
 
 # exec if ssh_dir is set from conf file.
-forSSH() {
-  local old_host file files rule
-  old_host="$1"
-  rule="$2"
-  if [ $ssh_dir ] ; then
-    files=$(find $ssh_dir -type f | xargs grep $old_host | awk '{print $1}')
-    for file in ${files%:*} ; do
-      sed -i "$rule" ${file%:*} || die "sed in ${file%:*}"
-      echo "[*] change host in ${file%:*}"
-    done
-  fi
+updSshKey() {
+  local old new user file 
+  user="$1"
+  file="$2"
+  old=$(grep $user $file | awk '{print $3}')
+  new=$(cat /etc/hostname | head -n 1)
+  sed -i "s:$old:$new:g" $file
+}
+
+forSsh() {
+  local user file f
+  user=$(echo ${ssh_dir%/*} | sed s:/home/::g)
+  file="$(find $ssh_dir -type f | xargs grep $user | awk '{print $1}')"
+  for f in $file ; do
+    updSshKey $user ${f%%:*}
+  done
 }
 
 # Write new value of hostname in multiple files
@@ -203,7 +208,7 @@ writeHost() {
   for file in $files ; do
     sed -i "$rule" $file || die "sed 1"
   done
-  forSSH "$old" "$rule"
+  forSsh
   [[ ! -z $xorg ]] && forXorg "$old" "$rule"
   otherHostFiles "$rule"
   $HOSTNAME $new
