@@ -19,7 +19,7 @@ source "${FUNCS-:/etc/paranoid/functions}"
 DEP_NO_OK=false
 
 # check deps
-DEPS="which systemctl hwclock hostname xauth chown"
+DEPS="which systemctl hwclock hostname chown"
 DEPS+=" ip ipcalc shuf tor dhcpcd tr hexdump dd modprobe"
 DEPS+=" head"
 DEPS_FILE="/dev/urandom"
@@ -123,7 +123,7 @@ fi
 # patch systemd script with real command path rather than the use of which
 # patch some path too
 
-DEPS+=" nft iptables iptables-restore"
+DEPS+=" nft iptables iptables-restore xauth"
 
 patchFiles() {
   local scripts dir s d comm rule

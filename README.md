@@ -3,10 +3,10 @@
 
 ## About 
 A script to protect your privacy.  
-Can optionnaly forge a random MAC address, localtime, hostname, private ip and apply a Transparent proxy through Tor with nftables or iptables.  
+Apply a Transparent proxy through Tor with nftables or iptables and optionnaly can spoof a random MAC address, localtime, hostname, private ip.  
 
 #### Firewall
-Add a basic and secure firewall with log and TOR, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials). 
+Add basic and secure rules for nftables or iptables, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials). 
 
 #### Systemd
 The daemon work with systemd, i created a service for ethernet and wifi card.  
