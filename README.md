@@ -3,7 +3,7 @@
 
 ## About 
 A script to protect your privacy.  
-Randomize the MAC address, localtime, private ip and apply a Transparent proxy through Tor with nftables or iptables.  
+Can optionnaly forge a random MAC address, localtime, hostname, private ip and apply a Transparent proxy through Tor with nftables or iptables.  
 
 #### Firewall
 Add a basic and secure firewall with log and TOR, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials). 
@@ -16,7 +16,7 @@ The wifi daemon require `wpa_supplicant`.
 + Add an option to print firewall log or not
 + Create a systemd timer service to reload the daemon all the X minutes.
 + Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()
-+ Create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] or setup a VPN with wireshark ?
++ Create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] or setup a VPN with wireguard ?
 
 ## Dependencies
 #### Archlinux
@@ -45,13 +45,18 @@ Make a copy of `paranoid.conf.sample`:
 
     # cp paranoid.conf.sample paranoid.conf
 
-Change the user:
-
-    # sed -i "s:brakk:your_username:g" paranoid.conf
-
-And change at least the value of `net_device=`, `target_router=` and the firewall used `firewall=`.
+If you doesn't want to randomize anything, change the value of `randomize` by `randomize=()`
 
     # make install
+
+## Configure
+Edit the config file at `/etc/paranoid-ninja/paranoid.conf`:
+
++ Change the user: `# sed -i "s:brakk:your_username:g" /etc/paranoid-ninja/paranoid.conf`
++ Your network card: `net_device="wlp2s0"`
++ The target router: `target_router="192.168.1.1"`
++ Your preferer firewall: `firewall="nftables"`
++ If want forge a random localtime only: `randomize=( "localtime" )`
 
 ## Usage
 

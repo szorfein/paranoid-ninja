@@ -235,6 +235,7 @@ writeHost() {
   forSsh
   [[ ! -z $xorg ]] && forXauth "$old"
   otherHostFiles "$rule"
+  $HOSTNAME $new
 }
 
 #######################################################
