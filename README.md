@@ -56,7 +56,7 @@ Edit the config file at `/etc/paranoid-ninja/paranoid.conf`:
 + Your network card: `net_device="wlp2s0"`
 + The target router: `target_router="192.168.1.1"`
 + Your preferer firewall: `firewall="nftables"`
-+ If want forge a random localtime only: `randomize=( "localtime" )`
++ If want forge a random timezone only: `randomize=( "timezone" )`
 
 ## Usage
 
