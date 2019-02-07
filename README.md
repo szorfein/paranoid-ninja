@@ -61,3 +61,21 @@ Edit the config file at `/etc/paranoid-ninja/paranoid.conf`:
 ## Usage
 
     # paranoid-ninja -h
+
+### Options
+
+    -t, --transparent-proxy  | Require arg  -c, --config <file.conf>
+
+Apply only a transparent proxy through tor with nftables or iptables
+
+    -r, --randomize  | Require arg -c, --config <file.conf>
+
+Look the config file, can forge a random MAC, hostname, ip, timezone and apply a transparent proxy through tor too
+
+    -s, --status
+
+Check if tor work and display your current ip address
+
+    -d, --delete
+
+Restore your files and try to restore your firewall rule if any
