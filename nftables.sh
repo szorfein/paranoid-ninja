@@ -175,10 +175,10 @@ addInet output ip daddr 127.0.0.1/32 tcp dport $trans_port "tcp flags & (fin|syn
 #addInet output skuid $tor_uid counter accept
 addInet output ip protocol icmp icmp type echo-request counter accept
 
-# Torrents
+# torrents
 # Ex config with aria2c contain:
 # listen-port = 6881-6886 | dht-listen-port = 6881-6886
-#addInet output oifname $IF udp sport 6881-6886 counter accept
+addInet output oifname $IF udp sport 6881-6886 counter accept
 
 # Default output log rule
 addInet output oifname != lo log prefix \"DROP \"
@@ -210,7 +210,8 @@ $NFT add rule nat output counter ip protocol tcp ip daddr $virt_tor redirect to 
 $NFT add rule nat output counter ip protocol udp ip daddr $virt_tor redirect to $trans_port
 
 # Do not torrify torrent
-#$NFT add rule nat output oifname $IF udp sport 6881-6886 counter return
+$NFT add rule nat output oifname $IF udp sport 6881-6886 counter return
+
 #$NFT add rule nat output ip protocol tcp ip daddr != 127.0.0.1/32 skuid != $tor_uid counter dnat to "127.0.0.1:$trans_port"
 #$NFT add rule nat output ip daddr != 127.0.0.1/32 skuid != $tor_uid udp dport 53 counter dnat to "127.0.0.1:$dns_port"
 
