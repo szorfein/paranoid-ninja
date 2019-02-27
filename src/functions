@@ -129,6 +129,16 @@ searchTorUid() {
   echo $tor_uid
 }
 
+clearIptables() {
+  local ipt=$(which iptables)
+  $ipt -F
+  $ipt -F -t nat
+  $ipt -X
+  $ipt -P INPUT DROP
+  $ipt -P OUTPUT DROP
+  $ipt -P FORWARD DROP
+}
+
 #######################################################
 # Hostname
 

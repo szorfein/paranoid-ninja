@@ -114,12 +114,7 @@ $MODPROBE ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 # Flushing rules
 
 echo "[+] Flushing existing rules..."
-$IPT -F
-$IPT -F -t nat
-$IPT -X
-$IPT -P INPUT DROP
-$IPT -P OUTPUT DROP
-$IPT -P FORWARD DROP
+clearIptables
 
 echo "[+] Setting up $firewall rules ..."
 

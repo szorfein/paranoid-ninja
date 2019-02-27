@@ -19,7 +19,7 @@ stopParanoid() {
   if [[ $firewall == "nftables" ]] ; then
     $NFT flush ruleset
   elif [[ $firewall == "iptables" ]] ; then
-    echo -n
+    clearIptables
   else
     echo "$firewall is no valid"
     exit 1

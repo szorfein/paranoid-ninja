@@ -7,9 +7,9 @@
 backup_dir=$HOME/ninja/backups
 
 # You can choose what randomize and skip some action
-# Full options are:
-# ("hostname" "timezone" "mac" "priv_ip")
-randomize=( "hostname" "timezone" "mac" "priv_ip" )
+# Order is important, full options are:
+# ( "mac" "hostname" "priv_ip" "timezone" )
+randomize=( "mac" "hostname" "priv_ip" "timezone" )
 
 #########################################################
 # Network
