@@ -140,12 +140,17 @@ echo "[+] Setting up $firewall rules ..."
 # INPUT CHAIN
 
 # tracking rules
-addInet input ct state invalid log prefix \"DROP INVALID \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet input ct state invalid log prefix \"DROP INVALID \"
+fi
+
 addInet input ct state invalid counter drop
 addInet input ct state established,related counter accept
 
 # Anti spoofing
-addInet input iif $IF ip saddr != $INT_NET log prefix \"SPOOFED PKT \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet input iif $IF ip saddr != $INT_NET log prefix \"SPOOFED PKT \"
+fi
 addInet input iif $IF ip saddr != $INT_NET drop
 
 # Accept rules
@@ -153,13 +158,17 @@ addInet input iifname lo counter accept
 addInet input ip protocol icmp icmp type echo-request accept
 
 # Default input log rule
-addInet input iif != lo log prefix \"DROP \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet input iif != lo log prefix \"DROP \"
+fi
 
 ########################################################
 # OUTPUT
 
 # Tracking rules
-addInet output ct state invalid log prefix \"DROP INVALID \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet output ct state invalid log prefix \"DROP INVALID \"
+fi
 addInet output ct state invalid counter drop
 addInet output ct state established,related counter accept
 
@@ -181,21 +190,29 @@ addInet output ip protocol icmp icmp type echo-request counter accept
 addInet output oifname $IF udp sport 6881-6886 counter accept
 
 # Default output log rule
-addInet output oifname != lo log prefix \"DROP \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet output oifname != lo log prefix \"DROP \"
+fi
 
 ########################################################
 # FORWARD CHAIN
 
-addInet forward ct state invalid log prefix \"FORWARD INVALID \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet forward ct state invalid log prefix \"FORWARD INVALID \"
+fi
 addInet forward ct state invalid counter drop
 addInet forward ct state established,related counter accept
 
 # Anti-spoofing rules
-addInet forward iifname $IF ip saddr != $INT_NET log prefix \"SPOOFED PKT \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet forward iifname $IF ip saddr != $INT_NET log prefix \"SPOOFED PKT \"
+fi
 addInet forward iifname $IF ip saddr != $INT_NET drop
 
 # Default output log rule
-addInet forward iifname != lo log prefix \"DROP \"
+if [ $firewall_quiet == "no" ] ; then
+  addInet forward iifname != lo log prefix \"DROP \"
+fi
 
 ########################################################
 # NAT CHAIN

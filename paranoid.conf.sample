@@ -34,6 +34,9 @@ static_ip="random"
 # Options are nftables or iptables
 firewall="nftables"
 
+# Show firewall log, "yes" or "no"
+firewall_quiet="yes"
+
 # Like static_ip
 # You can create a static address like 11:11:11:11:11:11
 # or random
