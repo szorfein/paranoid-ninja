@@ -10,6 +10,7 @@ BACKUP_DIR="$(grep -ie "^backup_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')"
 
 SCRIPTS="paranoid"
 SERVICES="paranoid@.service paranoid-wifi@.service paranoid-macspoof@.service"
+SERVICES+=" paranoid@.timer paranoid-wifi@.timer"
 LIBS="randomize.sh nftables.sh iptables.sh"
 
 DIR=$(pwd)

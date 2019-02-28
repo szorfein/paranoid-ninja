@@ -1,0 +1,8 @@
+[Unit]
+Description=Run all the 2 hours paranoid-ninja on %I
+
+[Timer]
+OnCalendar=00/2:00
+
+[Install]
+WantedBy=timers.target

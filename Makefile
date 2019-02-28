@@ -27,7 +27,9 @@ uninstall:
 	rm -Rf ${LIB_DIR}/${PROGRAM_NAME}
 	rm -f ${SYSTEMD_SCRIPT}/paranoid
 	rm -r ${SYSTEMD_SERVICE}/paranoid@.service
+	rm -r ${SYSTEMD_SERVICE}/paranoid@.timer
 	rm -r ${SYSTEMD_SERVICE}/paranoid-wifi@.service
+	rm -r ${SYSTEMD_SERVICE}/paranoid-macspoof@.timer
 	rm -r ${SYSTEMD_SERVICE}/paranoid-macspoof@.service
 	systemctl unmask nftables
 	systemctl unmask nftables-restore
