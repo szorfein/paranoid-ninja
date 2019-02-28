@@ -13,7 +13,6 @@ The daemon work with systemd, i created a service for ethernet and wifi card.
 The wifi daemon require `wpa_supplicant`.  
 
 ## TODO List
-+ Add an option to print firewall log or not
 + Create a systemd timer service to reload the daemon all the X minutes.
 + Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()
 + Create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] or setup a VPN with wireguard ?

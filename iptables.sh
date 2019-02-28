@@ -121,12 +121,16 @@ echo "[+] Setting up $firewall rules ..."
 ####################################################
 # Input chain
 
-$IPT -A INPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A INPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
+fi
 $IPT -A INPUT -m state --state INVALID -j DROP
 $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Anti-spoofing
-$IPT -A INPUT -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A INPUT -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
+fi
 $IPT -A INPUT -i $IF ! -s $INT_NET -j DROP
 
 # Accept rule
@@ -135,13 +139,17 @@ $IPT -A INPUT -i $IF -p tcp -s $INT_NET --dport 22 --syn -m state --state NEW -j
 $IPT -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 
 # default input log rule
-$IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+fi
 
 ####################################################
 # Output chain
 
 # Tracking rules
-$IPT -A OUTPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A OUTPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
+fi
 $IPT -A OUTPUT -m state --state INVALID -j DROP
 $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
@@ -162,24 +170,32 @@ $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN
 $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 
 # Default output log rule
-$IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+fi
 
 ####################################################
 # Forward chain
 
 # Tracking rule
-$IPT -A FORWARD -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A FORWARD -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
+fi
 $IPT -A FORWARD -m state --state INVALID -j DROP
 $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Anti-spoofing rule
-$IPT -A FORWARD -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A FORWARD -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
+fi
 $IPT -A FORWARD -i $IF ! -s $INT_NET -j DROP
 
 # Accept rule
 
 # Default log rule
-$IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+if [ $firewall_quiet == "no" ] ; then
+  $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
+fi
 
 ####################################################
 # NAT chain
@@ -190,6 +206,9 @@ $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIREC
 
 $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
+
+# Do not torrify torrent
+$IPT -t nat -A OUTPUT -p udp --dport 6881-6886 -j RETURN
 
 # Don't nat the tor process on local network
 $IPT -t nat -A OUTPUT -o lo -j RETURN
