@@ -38,23 +38,16 @@ The name of the packages may be different but need:
 Clone this repository:
 
     # git clone https://github.com/szorfein/paranoid-ninja.git
-
-Make a copy of `paranoid.conf.sample`:
-
-    # cp paranoid.conf.sample paranoid.conf
-
-If you doesn't want to randomize anything, change the value of `randomize` by `randomize=()`
-
     # make install
 
 ## Configure
-Edit the config file at `/etc/paranoid-ninja/paranoid.conf`:
+If install, edit the config file at `/etc/paranoid-ninja/paranoid.conf`.
 
-+ Change the user: `# sed -i "s:brakk:your_username:g" /etc/paranoid-ninja/paranoid.conf`
 + Your network card: `net_device="wlp2s0"`
 + The target router: `target_router="192.168.1.1"`
 + Your preferer firewall: `firewall="nftables"`
 + If want forge a random timezone only: `randomize=( "timezone" )`
++ Change the username: `# sed -i "s:brakk:your_username:g" /etc/paranoid-ninja/paranoid.conf`
 
 ## Usage
 

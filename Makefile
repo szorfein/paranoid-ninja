@@ -11,7 +11,7 @@ BACKUP_DIR=/etc/paranoid-ninja/backups
 .PHONY: insDaemon
 
 insDaemon:
-	./systemd.sh -c paranoid.conf
+	./systemd.sh -c paranoid.conf.sample
 
 prerequisites: insDaemon
 
