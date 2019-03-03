@@ -30,7 +30,6 @@ DEPS_FILE="/dev/urandom"
 
 checkArgConfig $1 $2
 CONF=$2
-checkRoot
 
 #######################################################
 # Check systemd on the system and dependencies
