@@ -59,74 +59,21 @@ done
 
 [[ $DEP_NO_OK == true ]] && die "dependencies are not complete"
 
-[[ ! -d $SYSTEMD_SERVICE ]] && die "dir $SYSTEMD_SERVICE is no found"
-
-# Create necessary path
-[[ ! -d $SYSTEMD_SCRIPT ]] && mkdir -p $SYSTEMD_SCRIPT
-
-######################################################
-# Copy | Install scripts
-
-ins() {
-  local com
-  com="$1"
-  $com
-  echo "[+] $com"
-}
-
-s="$DIR/systemd"
-for script in $SCRIPTS ; do
-  ins "install -Dm0744 "$s/$script" $SYSTEMD_SCRIPT/$script"
-done
-
-for service in $SERVICES ; do
-  ins "install -Dm0644 "$s/$service" $SYSTEMD_SERVICE/$service"
-done
-
-for l in $LIBS ; do
-  ins "install -Dm0744 "$DIR/src/$l" $LIB_DIR/$l"
-done
-
-# Don't erase the config file if exist
-if [ ! -f $CONF_DIR/paranoid.conf ] ; then
-  ins "install -Dm0644 $CONF $CONF_DIR/paranoid.conf"
-else
-  echo "You may probably update your config file"
-fi
-
-ins "install -Dm0755 "$DIR/paranoid.sh" $BIN_DIR/$PN"
-
 ######################################################
 # Create a config file for the MAC service
 
-file="$CONF"
-rand=$(grep -e "^randomize" $file)
-if_mac=$(echo $rand | grep mac)
+file="paranoid.conf.sample"
+net_device=$(grep -e "^net_device" $file)
 
-createMACConf() {
-  local new_conf if_true
-  new_conf="$CONF_DIR/paranoid-mac.conf"
-  if_true=$1
-  if [ $if_true == true ] ; then
-    echo 'randomize=( "mac" )' > $new_conf
-  else
-    echo 'randomize=()' > $new_conf
-  fi
-  grep -e "^net_device" $file >> $new_conf
-  grep -e "^firewall" $file >> $new_conf
-  echo "[+] $CONF_DIR/paranoid-mac.conf created"
-}
-
-if [[ ! -z $if_mac ]] ; then
-  createMACConf true
-else
-  createMACConf false
-fi
+cat > paranoid-mac.conf << EOF
+randomize=( "mac" )
+net_device=$net_device
+EOF
 
 ######################################################
 # Create new env
 
-cat > new_env << EOF
+cat > $PN << EOF
 PROGRAM_NAME=${PN}
 BIN_DIR=${BIN_DIR}
 CONF_DIR=${CONF_DIR}
@@ -135,13 +82,6 @@ SYSTEMD_SERVICE=${SYSTEMD_SERVICE}
 SYSTEMD_SCRIPT=${SYSTEMD_SCRIPT}
 BACKUP_DIR=${BACKUP_DIR}
 EOF
-
-if [ ! -d /etc/conf.d ] ; then
-  mkdir -p /etc/conf.d
-fi
-
-ins "install -Dm0644 new_env /etc/conf.d/$PN"
-rm new_env
 
 ######################################################
 # Advice 

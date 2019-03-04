@@ -264,13 +264,13 @@ writeHost() {
 # Check network
 
 checkIp() {
-  local external_ip ip_1 ip_2
+  local ext_ip
   printf "%s %s\\n" \
     "==>" "Checking your public IP, please wait..."
-  if ip_1=$(curl -s -m 10 https://ipinfo.io) ; then
-    printf "%s\\n" "$external_ip" | tr -d '"{}' | sed 's/ //g'
-  elif ip_2=$(curl -s -m 10 https://ip-api.com) ; then
-    printf "%s\\n" "$external_ip" | tr -d '"{}' | sed 's/ //g'
+  if ext_ip="$(curl -s -m 10 https://ipinfo.io)" ; then
+    printf "%s\\n" "$ext_ip" | tr -d '"{}' | sed 's/ //g'
+  elif ext_ip="$(curl -s -m 10 https://ip-api.com)" ; then
+    printf "%s\\n" "$ext_ip" | tr -d '"{}' | sed 's/ //g'
   else
     printf "%s\\n" "[ failed ] curl: HTTP request error"
     exit 1
