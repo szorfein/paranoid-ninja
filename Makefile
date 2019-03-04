@@ -1,11 +1,18 @@
 PROGRAM_NAME=paranoid-ninja
-BIN_DIR=/usr/bin
-CONF_DIR=/etc
-LIB_DIR=/lib
-DOC_DIR=/usr/share/doc
-SYSTEMD_SERVICE=/etc/systemd/system
-SYSTEMD_SCRIPT=/usr/lib/systemd/scripts
-BACKUP_DIR=/etc/paranoid-ninja/backups
+DESTDIR ?=
+
+ifndef DESTDIR
+	DESTDIR := /
+endif
+
+BIN_DIR=$(DESTDIR)usr/bin
+CONF_DIR=$(DESTDIR)etc
+CONFD_DIR=$(DESTDIR)etc/conf.d
+LIB_DIR=$(DESTDIR)lib
+DOC_DIR=$(DESTDIR)usr/share/doc
+SYSTEMD_SERVICE=$(DESTDIR)etc/systemd/system
+SYSTEMD_SCRIPT=$(DESTDIR)usr/lib/systemd/scripts
+BACKUP_DIR=$(DESTDIR)etc/paranoid-ninja/backups
 
 .PHONY: insDaemon
 insDaemon:
@@ -14,14 +21,16 @@ insDaemon:
 prerequisites: insDaemon
 
 install: prerequisites
+	install -dm755 $(DOC_DIR)/$(PROGRAM_NAME)
+	install -m644 README.md $(DOC_DIR)/$(PROGRAM_NAME)/README.md
 	install -Dm755 paranoid.sh $(BIN_DIR)/$(PROGRAM_NAME)
 	mkdir -p $(CONF_DIR)/$(PROGRAM_NAME)
 	install -Dm644 paranoid.conf.sample $(CONF_DIR)/$(PROGRAM_NAME)/paranoid.conf
 	install -Dm644 paranoid-mac.conf $(CONF_DIR)/$(PROGRAM_NAME)/
 	mkdir -p $(LIB_DIR)/$(PROGRAM_NAME)
 	install -Dm744 src/* $(LIB_DIR)/$(PROGRAM_NAME)/
-	mkdir -p /etc/conf.d
-	install -Dm644 $(PROGRAM_NAME).confd /etc/conf.d/$(PROGRAM_NAME)
+	mkdir -p $(CONFD_DIR)
+	install -Dm644 $(PROGRAM_NAME).confd $(CONFD_DIR)/$(PROGRAM_NAME)
 	$(if $(shell [ -d $(SYSTEMD_SCRIPT) ]),, \
 	  mkdir -p $(SYSTEMD_SCRIPT);\
     install -Dm744 systemd/paranoid $(SYSTEMD_SCRIPT)/;\
@@ -37,7 +46,7 @@ uninstall:
 	rm -Rf $(BACKUP_DIR)
 	rm -Rf $(CONF_DIR)/$(PROGRAM_NAME)
 	rm -Rf $(LIB_DIR)/$(PROGRAM_NAME)
-	rm -f /etc/conf.d/$(PROGRAM_NAME)
+	rm -f $(CONFD_DIR)/$(PROGRAM_NAME)
 	$(if $(shell [ -d $(SYSTEMD_SCRIPT) ]),, \
     rm -f $(SYSTEMD_SCRIPT)/paranoid;\
 	  rm -r $(SYSTEMD_SERVICE)/paranoid@.service;\
