@@ -1,0 +1,8 @@
+PROGRAM_NAME=paranoid-ninja
+BIN_DIR=$(pwd)
+CONF_DIR=$(pwd)
+LIB_DIR=$(pwd)/src
+DOC_DIR=$(pwd)
+SYSTEMD_SERVICE=$(pwd)/systemd
+SYSTEMD_SCRIPT=$(pwd)/systemd
+BACKUP_DIR=/etc/paranoid-ninja/backups

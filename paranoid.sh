@@ -14,8 +14,17 @@ SYSTEMCTL=$(which systemctl)
 DIR="$(pwd)"
 readonly prog_name="$0"
 
-FUNCS="$DIR/src/functions"
-source "${FUNCS}"
+if [ -f /lib/paranoid-ninja/functions ] ; then
+  FUNCS="/lib/paranoid-ninja/functions"
+elif [ -f $DIR/src/functions ] ; then
+  FUNCS="$DIR/src/functions"
+else
+  echo "Function no found..."
+  exit 1
+fi
+
+source $FUNCS
+loadEnv
 
 ######################################################
 # Colors
@@ -73,9 +82,9 @@ EOF
 
 firewall() {
   if [[ $firewall == "nftables" ]] ; then 
-    . $DIR/nftables.sh -c $CONF
+    . $LIB_DIR/nftables.sh -c $CONF
   elif [[ $firewall == "iptables" ]] ; then
-    . $DIR/iptables.sh -c $CONF
+    . $LIB_DIR/iptables.sh -c $CONF
   else
     die "$firewall Not a valid firewall"
   fi
@@ -87,16 +96,9 @@ firewall() {
 # Randomize
 
 randomize() {
-  . $DIR/randomize.sh -c $CONF
+  . $LIB_DIR/randomize.sh -c $CONF
   loadTor
   testTor
-}
-
-######################################################
-# Systemd
-
-systemd() {
-  . $DIR/systemd.sh -c $CONF
 }
 
 ######################################################
@@ -104,7 +106,7 @@ systemd() {
 
 stopParanoid() {
   local hostname
-  hostname="$(cat $backup_dir/hostname | head -n 1)"
+  hostname="$(cat $BACKUP_DIR/hostname | head -n 1)"
   [[ ! -z $hostname ]] && writeHost $hostname
   restoreFiles
   if [[ $firewall == "nftables" ]] ; then

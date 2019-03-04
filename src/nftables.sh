@@ -8,10 +8,6 @@ SYSTEMCTL=$(which systemctl)
 OUTPUT="/var/lib/nftables/rules-save"
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
-DIR="$(pwd)"
-FUNCS="$DIR/src/functions"
-source "${FUNCS-:/etc/paranoid/functions}"
-
 ######################################################
 # Check Bins
 

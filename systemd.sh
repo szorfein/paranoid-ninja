@@ -11,11 +11,11 @@ BACKUP_DIR="$(grep -ie "^backup_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')"
 SCRIPTS="paranoid"
 SERVICES="paranoid@.service paranoid-wifi@.service paranoid-macspoof@.service"
 SERVICES+=" paranoid@.timer paranoid-wifi@.timer"
-LIBS="randomize.sh nftables.sh iptables.sh"
+LIBS="randomize.sh nftables.sh iptables.sh functions"
 
 DIR=$(pwd)
-FUNCS="$DIR/src/functions"
-source "${FUNCS-:/etc/paranoid/functions}"
+FUNCS=$DIR/src/functions
+source $FUNCS
 
 DEP_NO_OK=false
 
@@ -83,10 +83,17 @@ for service in $SERVICES ; do
   ins "install -Dm0644 "$s/$service" $SYSTEMD_SERVICE/$service"
 done
 
-ins "install -Dm0744 "$DIR/nftables.sh" $LIB_DIR/nftables.sh"
-ins "install -Dm0744 "$DIR/iptables.sh" $LIB_DIR/iptables.sh"
-ins "install -Dm0744 "$DIR/randomize.sh" $LIB_DIR/randomize.sh"
-ins "install -Dm0644 $CONF $CONF_DIR/paranoid.conf"
+for l in $LIBS ; do
+  ins "install -Dm0744 "$DIR/src/$l" $LIB_DIR/$l"
+done
+
+# Don't erase the config file if exist
+if [ ! -f $CONF_DIR/paranoid.conf ] ; then
+  ins "install -Dm0644 $CONF $CONF_DIR/paranoid.conf"
+else
+  echo "You may probably update your config file"
+fi
+
 ins "install -Dm0755 "$DIR/paranoid.sh" $BIN_DIR/$PN"
 
 ######################################################
@@ -112,54 +119,29 @@ createMACConf() {
 
 if [[ ! -z $if_mac ]] ; then
   createMACConf true
-  sed -i "s:\"mac\" ::g" $CONF_DIR/paranoid.conf
 else
   createMACConf false
 fi
 
 ######################################################
-# Patch systemd script
+# Create new env
 
-# patch systemd script with real command path rather than the use of which
-# patch some path too
+cat > new_env << EOF
+PROGRAM_NAME=${PN}
+BIN_DIR=${BIN_DIR}
+CONF_DIR=${CONF_DIR}
+LIB_DIR=${LIB_DIR}
+SYSTEMD_SERVICE=${SYSTEMD_SERVICE}
+SYSTEMD_SCRIPT=${SYSTEMD_SCRIPT}
+BACKUP_DIR=${BACKUP_DIR}
+EOF
 
-DEPS+=" nft iptables iptables-restore xauth"
+if [ ! -d /etc/conf.d ] ; then
+  mkdir -p /etc/conf.d
+fi
 
-patchFiles() {
-  local scripts dir s d comm rule
-  scripts="$1"
-  dir="$2"
-  for s in $scripts ; do
-    [[ ! -f $dir/$s ]] && die "File $dir/$s no found"
-    for d in $DEPS ; do
-      comm=$(which $d)
-      rule="s:\$(which $d):$comm:g"
-      sed -i "$rule" $dir/$s
-      sed -i "s:\$DIR/src:$LIB_DIR:g" $dir/$s
-      sed -i "s:\$DIR:$LIB_DIR:g" $dir/$s
-      sed -i "s:\$LIB_DIR:$LIB_DIR:g" $dir/$s
-      sed -i "s:\$SYSTEMD_SCRIPT:$SYSTEMD_SCRIPT:g" $dir/$s
-      sed -i "s:\$CONF_DIR:$CONF_DIR:g" $dir/$s
-      #echo "[*] patch file $dir/$s, with rule = $rule"
-    done
-  done
-}
-
-patchFiles "$SCRIPTS" "$SYSTEMD_SCRIPT"
-patchFiles "$LIBS" "$LIB_DIR"
-patchFiles "$SERVICES" "$SYSTEMD_SERVICE"
-patchFiles "$SERVICES" "$SYSTEMD_SERVICE"
-patchFiles $PN "$BIN_DIR"
-sed -i "s:\$HOME/ninja/backups:$BACKUP_DIR:g" $CONF_DIR/paranoid.conf
-
-######################################################
-# Mask redundant service
-
-# Mask firewall because scripts generate news rule 
-# each times, some service back if only disabled
-systemctl mask nftables
-systemctl mask nftables-restore
-systemctl mask iptables
+ins "install -Dm0644 new_env /etc/conf.d/$PN"
+rm new_env
 
 ######################################################
 # Advice 

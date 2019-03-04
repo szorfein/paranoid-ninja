@@ -16,7 +16,9 @@ prerequisites: insDaemon
 
 install: prerequisites
 	install -Dm644 README.md $(DOC_DIR)/$(PROGRAM_NAME)/README.md
-	install -Dm744 src/functions $(LIB_DIR)/$(PROGRAM_NAME)/functions
+	systemctl mask nftables
+	systemctl mask nftables-restore
+	systemctl mask iptables
 
 uninstall:
 	rm -f $(BIN_DIR)/$(PROGRAM_NAME)
@@ -24,6 +26,7 @@ uninstall:
 	rm -Rf $(BACKUP_DIR)
 	rm -Rf $(CONF_DIR)/$(PROGRAM_NAME)
 	rm -Rf $(LIB_DIR)/$(PROGRAM_NAME)
+	rm -f /etc/conf.d/$(PROGRAM_NAME)
 	rm -f $(SYSTEMD_SCRIPT)/paranoid
 	rm -r $(SYSTEMD_SERVICE)/paranoid@.service
 	rm -r $(SYSTEMD_SERVICE)/paranoid@.timer

@@ -8,9 +8,13 @@ MAC=false
 STOP=false
 RELOAD=false
 
-DIR="$(pwd)"
-FUNCS="$DIR/src/functions"
-source ${FUNCS}
+DIR=/lib/paranoid-ninja
+if [ -f $DIR/functions ] ; then
+  FUNCS="$DIR/functions"
+fi
+
+source $FUNCS
+loadEnv
 
 ######################################################
 # Stop

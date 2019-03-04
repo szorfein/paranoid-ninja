@@ -18,10 +18,6 @@ HEAD=$(which head)
 LOCALTIME=/etc/localtime
 BACKUP_FILES="/etc/hosts /etc/hostname"
 
-DIR=$(pwd)
-FUNCS="$DIR/src/functions"
-source "${FUNCS}"
-
 #######################################################
 # Check deps
 
@@ -30,6 +26,10 @@ source "${FUNCS}"
 [[ -z $SYS ]] && die "systemd is no found, plz install"
 [[ -z $IP ]] && die "iproute2 is no found, plz install"
 [[ -z $TOR ]] && die "tor is no found, plz install"
+
+checkArgConfig $1 $2
+CONF="$2"
+checkRoot
 
 #######################################################
 # Randomize the link /etc/localtime from systemd
@@ -147,8 +147,8 @@ changeIp() {
     $IP addr add $new_ip broadcast $broad dev $net_device
     $IP route add default via $target_router dev $net_device
     # restart the firewall
-    [[ $firewall == "nftables" ]] && . $DIR/nftables.sh -c $CONF
-    [[ $firewall == "iptables" ]] && . $DIR/iptables.sh -c $CONF
+    [[ $firewall == "nftables" ]] && . $LIB_DIR/nftables.sh -c $CONF
+    [[ $firewall == "iptables" ]] && . $LIB_DIR/iptables.sh -c $CONF
   else
     echo "[Err] The address $new_ip is incorrect"
     exit 1
@@ -173,10 +173,6 @@ updIp() {
 #######################################################
 # Main
 
-checkArgConfig $1 $2
-CONF="$2"
-checkRoot
-
 # Add ssh_dir to the backup list
 if [ $ssh_dir ] ; then
   [[ -d $ssh_dir ]] && BACKUP_FILES+=" $ssh_dir"
@@ -194,8 +190,8 @@ backupFiles "$BACKUP_FILES"
 # variable from paranoid.conf
 for a in "${randomize[@]}" ; do
   [[ $a == "mac" ]] && changeMac
-  [[ $a == "timezone" ]] && randTimezone
   [[ $a == "hostname" ]] && randHost
+  [[ $a == "timezone" ]] && randTimezone
   [[ $a == "priv_ip" ]] && updIp
 done
 

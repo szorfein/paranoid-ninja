@@ -6,9 +6,9 @@ Before=tor.service
 Requires=paranoid-macspoof@%i.service tor.service
 
 [Service]
-ExecStart=$SYSTEMD_SCRIPT/paranoid -r -c $CONF_DIR/paranoid.conf
-ExecReload=$SYSTEMD_SCRIPT/paranoid -R -c $CONF_DIR/paranoid.conf
-ExecStop=$SYSTEMD_SCRIPT/paranoid -s -c $CONF_DIR/paranoid.conf
+ExecStart=/usr/lib/systemd/scripts/paranoid -r -c /etc/paranoid-ninja/paranoid.conf
+ExecReload=/usr/lib/systemd/scripts/paranoid -R -c /etc/paranoid-ninja/paranoid.conf
+ExecStop=/usr/lib/systemd/scripts/paranoid -s -c /etc/paranoid-ninja/paranoid.conf
 RemainAfterExit=yes
 TimeoutSec=35
 IgnoreSIGPIPE=false

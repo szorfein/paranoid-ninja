@@ -15,6 +15,17 @@ checkRoot() {
 #######################################################
 # Command option
 
+loadEnv() {
+  local env dir=$(pwd)
+  if [ -f /etc/conf.d/paranoid-ninja ] ; then
+    source /etc/conf.d/paranoid-ninja
+  elif [ -f $dir/src/env ] ; then
+    source $dir/src/env
+  else 
+    die "file env no found env=$dir/src/env"
+  fi
+}
+
 checkConfigFile() {
   local relativ full
   relativ="$DIR/$1"
@@ -156,13 +167,13 @@ otherHostFiles() {
 
 # forXorg, avoid error like display no found
 # http://ubuntuhandbook.org/index.php/2016/06/change-hostname-ubuntu-16-04-without-restart/
-XAUTH_COM="$XAUTH -f $xauthority_file"
 addXauth() {
   local user
   user=$(echo ${xauthority_file%/*} | sed s:/home/::g)
   $XAUTH_COM add "$1" $2 $3 &&
   $XAUTH_COM remove "$4" &&
   chown $user:$user $xauthority_file || die "xauth - fail to change $xauthority_file"
+  unset XAUTH_COM
 }
 
 checkXauth() {
@@ -180,7 +191,8 @@ checkXauth() {
 }
 
 forXauth() {
-  local if_one old_host
+  local if_one old_host XAUTH_COM="$XAUTH -f $xauthority_file"
+  export XAUTH_COM
   [[ -z $XAUTH ]] && die "xauth - xauth is no found ..."
   if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
     if_one=$($XAUTH_COM list | wc -l)
@@ -255,10 +267,9 @@ checkIp() {
   local external_ip ip_1 ip_2
   printf "%s %s\\n" \
     "==>" "Checking your public IP, please wait..."
-
-  ip_1=$(curl -s -m 10 https://ipinfo.io)
-  ip_2=$(curl -s -m 10 https://ip-api.com)
-  if external_ip="$ip_1" || external_ip="$ip_2" ; then
+  if ip_1=$(curl -s -m 10 https://ipinfo.io) ; then
+    printf "%s\\n" "$external_ip" | tr -d '"{}' | sed 's/ //g'
+  elif ip_2=$(curl -s -m 10 https://ip-api.com) ; then
     printf "%s\\n" "$external_ip" | tr -d '"{}' | sed 's/ //g'
   else
     printf "%s\\n" "[ failed ] curl: HTTP request error"
