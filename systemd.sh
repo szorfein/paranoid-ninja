@@ -19,27 +19,17 @@ source $FUNCS
 
 DEP_NO_OK=false
 
-# check deps
 DEPS="which systemctl hwclock hostname chown"
 DEPS+=" ip ipcalc shuf tor dhcpcd tr hexdump dd modprobe"
 DEPS+=" head"
 DEPS_FILE="/dev/urandom"
 
-#######################################################
-# Check root
-
 checkArgConfig $1 $2
 CONF=$2
 
-#######################################################
-# Check systemd on the system and dependencies
-
 for d in $DEPS ; do
   which $d >/dev/null 2>&1
-  if [ $? -eq 0 ] ; then
-    #echo "[OK] check command $d into $(which $d)"
-    echo
-  else
+  if [ $? -ne 0 ] ; then
     DEP_NO_OK=true
     echo "[ Failed ] command $d no found, install it plz"
   fi
@@ -59,9 +49,6 @@ done
 
 [[ $DEP_NO_OK == true ]] && die "dependencies are not complete"
 
-######################################################
-# Create a config file for the MAC service
-
 file="paranoid.conf.sample"
 net_device=$(grep -e "^net_device" $file)
 
@@ -69,9 +56,6 @@ cat > paranoid-mac.conf << EOF
 randomize=( "mac" )
 net_device=$net_device
 EOF
-
-######################################################
-# Create new env
 
 cat > $PN.confd << EOF
 PROGRAM_NAME=${PN}
@@ -82,9 +66,6 @@ SYSTEMD_SERVICE=${SYSTEMD_SERVICE}
 SYSTEMD_SCRIPT=${SYSTEMD_SCRIPT}
 BACKUP_DIR=${BACKUP_DIR}
 EOF
-
-######################################################
-# Advice 
 
 echo "[*] For ethernet card: systemctl start paranoid@enp3s0"
 echo "[*] For wifi card: systemctl start paranoid-wifi@wlp2s0"
