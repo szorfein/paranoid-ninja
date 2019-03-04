@@ -73,7 +73,7 @@ EOF
 ######################################################
 # Create new env
 
-cat > $PN << EOF
+cat > $PN.confd << EOF
 PROGRAM_NAME=${PN}
 BIN_DIR=${BIN_DIR}
 CONF_DIR=${CONF_DIR}
