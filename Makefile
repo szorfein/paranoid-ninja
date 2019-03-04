@@ -14,7 +14,7 @@ insDaemon:
 prerequisites: insDaemon
 
 install: prerequisites
-	install -Dm744 $(DOC_DIR)/$(PROGRAM_NAME)
+	install -dm755 $(DOC_DIR)/$(PROGRAM_NAME)
 	install -Dm644 README.md $(DOC_DIR)/$(PROGRAM_NAME)/README.md
 	install -Dm755 paranoid.sh $(BIN_DIR)/$(PROGRAM_NAME)
 	mkdir -p $(CONF_DIR)/$(PROGRAM_NAME)
