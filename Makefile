@@ -10,7 +10,7 @@ CONF_DIR=${DESTDIR}etc
 CONFD_DIR=${DESTDIR}etc/conf.d
 LIB_DIR=${DESTDIR}lib
 DOC_DIR=${DESTDIR}usr/share/doc
-SYSTEMD_SERVICE=${DESTDIR}lib/systemd/system
+SYSTEMD_SERVICE=${DESTDIR}usr/lib/systemd/system
 BACKUP_DIR=${DESTDIR}etc/paranoid-ninja/backups
 
 .PHONY: insDaemon

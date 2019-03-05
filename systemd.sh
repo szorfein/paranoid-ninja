@@ -47,11 +47,12 @@ done
 
 [[ $DEP_NO_OK == true ]] && die "dependencies are not complete"
 
+DESTDIR=/
 cat > $PN.confd << EOF
-PROGRAM_NAME=$(echo $PN | sed "s:\${DESTDIR}:$3:g")
-BIN_DIR=$(echo $BIN_DIR | sed "s:\${DESTDIR}:$3:g")
-CONF_DIR=$(echo $CONF_DIR | sed "s:\${DESTDIR}:$3:g")
-LIB_DIR=$(echo $LIB_DIR | sed "s:\${DESTDIR}:$3:g")
-SYSTEMD_SERVICE=$(echo $SYSTEMD_SERVICE | sed "s:\${DESTDIR}:$3:g")
-BACKUP_DIR=$(echo $BACKUP_DIR | sed "s:\${DESTDIR}:$3:g")
+PROGRAM_NAME=$(echo $PN | sed "s:\${DESTDIR}:$DESTDIR:g")
+BIN_DIR=$(echo $BIN_DIR | sed "s:\${DESTDIR}:$DESTDIR:g")
+CONF_DIR=$(echo $CONF_DIR | sed "s:\${DESTDIR}:$DESTDIR:g")
+LIB_DIR=$(echo $LIB_DIR | sed "s:\${DESTDIR}:$DESTDIR:g")
+SYSTEMD_SERVICE=$(echo $SYSTEMD_SERVICE | sed "s:\${DESTDIR}:$DESTDIR:g")
+BACKUP_DIR=$(echo $BACKUP_DIR | sed "s:\${DESTDIR}:$DESTDIR:g")
 EOF

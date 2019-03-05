@@ -1,9 +1,8 @@
 # Copyright 2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-
 EAPI=6
-inherit git-r3
+inherit git-r3 systemd
 
 DESCRIPTION="Transparent proxy over through tor with nftables or iptables"
 HOMEPAGE="https://github.com/szorfein/paranoid-ninja"
@@ -27,4 +26,10 @@ BDEPEND=""
 
 src_install() {
 make DESTDIR="${D}" install
+
+systemd_dounit "systemd/paranoid-wifi@.service"
+systemd_dounit "systemd/paranoid@.service"
+systemd_dounit "systemd/paranoid-macspoof@.service"
+systemd_dounit "systemd/paranoid-wifi@.timer"
+systemd_dounit "systemd/paranoid@.timer"
 }
