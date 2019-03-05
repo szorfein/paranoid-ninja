@@ -96,15 +96,20 @@ firewall() {
 # Randomize
 
 randomize() {
-  . $LIB_DIR/randomize.sh -c $CONF
-  loadTor
-  testTor
+  if [ $RAND == "mac" ] ; then
+    . $LIB_DIR/randomize.sh -c $CONF $RAND
+  elif [ $RAND == "rand-only" ] ; then
+    . $LIB_DIR/randomize.sh -c $CONF
+  else
+    . $LIB_DIR/randomize.sh -c $CONF
+    loadTor
+  fi
 }
 
 ######################################################
-# Stop
+# reload backup files
 
-stopParanoid() {
+useBackup() {
   local hostname
   hostname="$(cat $BACKUP_DIR/hostname | head -n 1)"
   [[ ! -z $hostname ]] && writeHost $hostname
@@ -120,6 +125,19 @@ stopParanoid() {
   fi
   loadTor
   testTor
+}
+
+######################################################
+# stop firewall
+
+stopFirewall() {
+  if [[ $firewall == "nftables" ]] ; then
+    $NFT flush ruleset
+  elif [[ $firewall == "iptables" ]] ; then
+    clearIptables
+  else
+    die "$firewall is no valid"
+  fi
 }
 
 ######################################################
@@ -168,6 +186,14 @@ while [ "$#" -gt 0 ] ; do
       RAND=true
       shift
       ;;
+    -o | --rand-only)
+      RAND="rand-only"
+      shift
+      ;;
+    -m | --mac)
+      RAND="mac"
+      shift
+      ;;
     -c | --config)
       CONF="$2"
       checkConfigFile "$2"
@@ -178,7 +204,11 @@ while [ "$#" -gt 0 ] ; do
       STATUS=true
       shift
       ;;
-    -d | --delete)
+    -b | --backup)
+      BACKUP=true
+      shift
+      ;;
+    -S | --stop)
       STOP=true
       shift
       ;;
@@ -206,8 +236,12 @@ if [[ $RAND ]] && [[ $CONF ]] ; then
   randomize
 fi
 
-if [[ $STOP == true ]] && [[ $CONF ]] ; then
-  stopParanoid
+if [[ $BACKUP == true ]] && [[ $CONF ]] ; then
+  useBackup
+fi
+
+if [[ $STOP == true ]] ; then
+  stopFirewall
 fi
 
 if [[ $STATUS == true ]] ; then

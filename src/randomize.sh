@@ -187,12 +187,16 @@ fi
  
 backupFiles "$BACKUP_FILES"
 
-# variable from paranoid.conf
-for a in "${randomize[@]}" ; do
-  [[ $a == "mac" ]] && changeMac
-  [[ $a == "hostname" ]] && randHost
-  [[ $a == "timezone" ]] && randTimezone
-  [[ $a == "priv_ip" ]] && updIp
-done
+if [[ "$3" == "mac" ]] ; then
+  changeMac
+else
+  # variable from paranoid.conf
+  for a in "${randomize[@]}" ; do
+    [[ $a == "mac" ]] && changeMac
+    [[ $a == "hostname" ]] && randHost
+    [[ $a == "timezone" ]] && randTimezone
+    [[ $a == "priv_ip" ]] && updIp
+  done
+fi
 
 echo "[*] Relaunch your web browser is recommended"

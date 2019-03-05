@@ -5,18 +5,17 @@ ifndef DESTDIR
 	DESTDIR := /
 endif
 
-BIN_DIR=$(DESTDIR)usr/bin
-CONF_DIR=$(DESTDIR)etc
-CONFD_DIR=$(DESTDIR)etc/conf.d
-LIB_DIR=$(DESTDIR)lib
-DOC_DIR=$(DESTDIR)usr/share/doc
-SYSTEMD_SERVICE=$(DESTDIR)etc/systemd/system
-SYSTEMD_SCRIPT=$(DESTDIR)usr/lib/systemd/scripts
-BACKUP_DIR=$(DESTDIR)etc/paranoid-ninja/backups
+BIN_DIR=${DESTDIR}usr/bin
+CONF_DIR=${DESTDIR}etc
+CONFD_DIR=${DESTDIR}etc/conf.d
+LIB_DIR=${DESTDIR}lib
+DOC_DIR=${DESTDIR}usr/share/doc
+SYSTEMD_SERVICE=${DESTDIR}lib/systemd/system
+BACKUP_DIR=${DESTDIR}etc/paranoid-ninja/backups
 
 .PHONY: insDaemon
 insDaemon:
-	./systemd.sh -c paranoid.conf.sample
+	./systemd.sh -c paranoid.conf.sample $(DESTDIR)
 
 prerequisites: insDaemon
 
@@ -26,14 +25,11 @@ install: prerequisites
 	install -Dm755 paranoid.sh $(BIN_DIR)/$(PROGRAM_NAME)
 	mkdir -p $(CONF_DIR)/$(PROGRAM_NAME)
 	install -Dm644 paranoid.conf.sample $(CONF_DIR)/$(PROGRAM_NAME)/paranoid.conf
-	install -Dm644 paranoid-mac.conf $(CONF_DIR)/$(PROGRAM_NAME)/
 	mkdir -p $(LIB_DIR)/$(PROGRAM_NAME)
 	install -Dm744 src/* $(LIB_DIR)/$(PROGRAM_NAME)/
 	mkdir -p $(CONFD_DIR)
 	install -Dm644 $(PROGRAM_NAME).confd $(CONFD_DIR)/$(PROGRAM_NAME)
 	$(if $(shell [ -d $(SYSTEMD_SCRIPT) ]),, \
-	  mkdir -p $(SYSTEMD_SCRIPT);\
-    install -Dm744 systemd/paranoid $(SYSTEMD_SCRIPT)/;\
     install -Dm644 systemd/*.service $(SYSTEMD_SERVICE)/;\
     install -Dm644 systemd/*.timer $(SYSTEMD_SERVICE)/;\
 	  systemctl mask nftables;\
@@ -48,7 +44,6 @@ uninstall:
 	rm -Rf $(LIB_DIR)/$(PROGRAM_NAME)
 	rm -f $(CONFD_DIR)/$(PROGRAM_NAME)
 	$(if $(shell [ -d $(SYSTEMD_SCRIPT) ]),, \
-    rm -f $(SYSTEMD_SCRIPT)/paranoid;\
 	  rm -r $(SYSTEMD_SERVICE)/paranoid@.service;\
     rm -r $(SYSTEMD_SERVICE)/paranoid@.timer;\
     rm -r $(SYSTEMD_SERVICE)/paranoid-wifi@.service;\

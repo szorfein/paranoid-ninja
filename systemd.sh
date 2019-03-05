@@ -3,12 +3,10 @@
 PN=$(grep -ie "^program_name" Makefile | awk 'BEGIN {FS="="}{print $2}')
 BIN_DIR="$(grep -ie "^bin_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')"
 SYSTEMD_SERVICE=$(grep -ie "^systemd_service" Makefile | awk 'BEGIN {FS="="}{print $2}')
-SYSTEMD_SCRIPT=$(grep -ie "^systemd_script" Makefile | awk 'BEGIN {FS="="}{print $2}')
 CONF_DIR="$(grep -ie "^conf_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')/${PN}"
 LIB_DIR="$(grep -ie "^lib_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')/${PN}"
 BACKUP_DIR="$(grep -ie "^backup_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')"
 
-SCRIPTS="paranoid"
 SERVICES="paranoid@.service paranoid-wifi@.service paranoid-macspoof@.service"
 SERVICES+=" paranoid@.timer paranoid-wifi@.timer"
 LIBS="randomize.sh nftables.sh iptables.sh functions"
@@ -49,23 +47,11 @@ done
 
 [[ $DEP_NO_OK == true ]] && die "dependencies are not complete"
 
-file="paranoid.conf.sample"
-net_device=$(grep -e "^net_device" $file)
-
-cat > paranoid-mac.conf << EOF
-randomize=( "mac" )
-net_device=$net_device
-EOF
-
 cat > $PN.confd << EOF
-PROGRAM_NAME=${PN}
-BIN_DIR=${BIN_DIR}
-CONF_DIR=${CONF_DIR}
-LIB_DIR=${LIB_DIR}
-SYSTEMD_SERVICE=${SYSTEMD_SERVICE}
-SYSTEMD_SCRIPT=${SYSTEMD_SCRIPT}
-BACKUP_DIR=${BACKUP_DIR}
+PROGRAM_NAME=$(echo $PN | sed "s:\${DESTDIR}:$3:g")
+BIN_DIR=$(echo $BIN_DIR | sed "s:\${DESTDIR}:$3:g")
+CONF_DIR=$(echo $CONF_DIR | sed "s:\${DESTDIR}:$3:g")
+LIB_DIR=$(echo $LIB_DIR | sed "s:\${DESTDIR}:$3:g")
+SYSTEMD_SERVICE=$(echo $SYSTEMD_SERVICE | sed "s:\${DESTDIR}:$3:g")
+BACKUP_DIR=$(echo $BACKUP_DIR | sed "s:\${DESTDIR}:$3:g")
 EOF
-
-echo "[*] For ethernet card: systemctl start paranoid@enp3s0"
-echo "[*] For wifi card: systemctl start paranoid-wifi@wlp2s0"
