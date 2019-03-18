@@ -1,11 +1,6 @@
 #########################################################
 # Globals options
 
-# Will save your files here, dont touch that
-# The line is rewritten at each install,
-# Edit the Makefile at BACKUP_DIR if want another value
-backup_dir=$HOME/ninja/backups
-
 # You can choose what randomize and skip some action
 # Order is important, full options are:
 # ( "mac" "hostname" "timezone" "priv_ip" )

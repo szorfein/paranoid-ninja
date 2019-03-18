@@ -144,6 +144,8 @@ stopFirewall() {
 # Show menu
 
 menu() {
+  banner
+
   printf "${green}%s${endc}\\n" \
     "-t, --transparent-tor    Transparent-torrify on nftables or iptables"
   echo "usage: $0 [-t] [-c paranoid.conf]"
@@ -173,8 +175,6 @@ if [ "$#" -eq 0 ]; then
     printf "%s\\n" "Try '$prog_name --help' for more information."
     exit 1
 fi
-
-banner
 
 while [ "$#" -gt 0 ] ; do
   case "$1" in

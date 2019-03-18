@@ -61,17 +61,17 @@ checkArgConfig() {
 backupFiles() {
   local b backup_list
   backup_list="$1"
-  if [ $backup_dir ] ; then
-    [[ ! -d $backup_dir ]] && mkdir -p $backup_dir
+  if [ $BACKUP_DIR ] ; then
+    [[ ! -d $BACKUP_DIR ]] && mkdir -p $BACKUP_DIR
     # $f can be a directory or a file
     for b in $backup_list ; do
-      if [[ -f "$backup_dir/${b##*/}" ]] ; then
+      if [[ -f "$BACKUP_DIR/${b##*/}" ]] ; then
         echo -n
-      elif [[ -d "$backup_dir/${b##*/}" ]] ; then
+      elif [[ -d "$BACKUP_DIR/${b##*/}" ]] ; then
         echo -n
       else
-        echo "[*] backup $b to $backup_dir ..."
-        cp -a "$b" "$backup_dir/"
+        echo "[*] backup $b to $BACKUP_DIR ..."
+        cp -a "$b" "$BACKUP_DIR/"
       fi
     done
   else
@@ -91,7 +91,7 @@ cpy() {
 
 restoreFiles() {
   local dir f
-  dir=$backup_dir
+  dir=$BACKUP_DIR
   [[ -z $dir ]] && die "$dir no found"
   cpy $dir/hostname /etc/default/hostname
   cpy $dir/hosts /etc/hosts
