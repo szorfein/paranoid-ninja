@@ -43,6 +43,11 @@ tor_uid=$(searchTorUid)
 
 backupFiles "$BACKUP_FILES"
 
+#######################################################
+# docker
+
+docker_v4=$docker_ipv4
+
 #####################################################
 # Load Tor variables from /etc/tor/torrc
 
@@ -82,7 +87,7 @@ fi
 readonly virt_tor=$(grep VirtualAddrNetworkIPv4 $torrc | awk '{print $2}')
 
 # non Tor addr
-readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4"
+readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_v4 192.168.0.0/16 224.0.0.0/4"
 
 # Just to be sure :)
 [[ -z $trans_port ]] && die "No TransPort value found on $torrc"
@@ -141,6 +146,11 @@ if [ $firewall_quiet == "no" ] ; then
 fi
 
 addInet input ct state invalid counter drop
+
+if [ $docker_use == "yes" ] ; then
+  addInet input ip saddr $docker_v4 accept
+fi
+
 addInet input ct state established,related counter accept
 
 # Anti spoofing
@@ -166,6 +176,7 @@ if [ $firewall_quiet == "no" ] ; then
   addInet output ct state invalid log prefix \"DROP INVALID \"
 fi
 addInet output ct state invalid counter drop
+
 addInet output ct state established,related counter accept
 
 # Allow Tor process output
@@ -197,6 +208,11 @@ if [ $firewall_quiet == "no" ] ; then
   addInet forward ct state invalid log prefix \"FORWARD INVALID \"
 fi
 addInet forward ct state invalid counter drop
+
+if [ $docker_use == "yes" ] ; then
+  addInet forward ip saddr $docker_v4 oif $IF accept
+fi
+
 addInet forward ct state established,related counter accept
 
 # Anti-spoofing rules
@@ -221,6 +237,10 @@ $NFT add rule nat output skuid $tor_uid udp dport 53 counter redirect to $dns_po
 
 $NFT add rule nat output counter ip protocol tcp ip daddr $virt_tor redirect to $trans_port
 $NFT add rule nat output counter ip protocol udp ip daddr $virt_tor redirect to $trans_port
+
+if [ $docker_use == "yes" ] ; then
+  $NFT add rule nat postrouting ip saddr $docker_v4 oif $IF masquerade
+fi
 
 # Do not torrify torrent
 $NFT add rule nat output oifname $IF udp sport 6881-6886 counter return
