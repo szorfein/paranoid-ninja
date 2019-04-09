@@ -5,7 +5,6 @@ NFT=$(which nft)
 IP=$(which ip)
 SYSTEMCTL=$(which systemctl)
 
-OUTPUT="/var/lib/nftables/rules-save"
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
 ######################################################

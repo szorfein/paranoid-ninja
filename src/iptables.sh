@@ -7,10 +7,6 @@ SYSTEMCTL=$(which systemctl)
 
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
-DIR="$(pwd)"
-FUNCS="$DIR/src/functions"
-source "${FUNCS-:/etc/paranoid/functions}"
-
 ####################################################
 # Check Bins
 
@@ -168,6 +164,9 @@ $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN
 
 #$IPT -A OUTPUT -m owner --uid-owner $tor_uid -j ACCEPT
 $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+
+# Torrents
+$IPT -A OUTPUT -o $IF -p udp --sport 6881-6886 -j ACCEPT
 
 # Default output log rule
 if [ $firewall_quiet == "no" ] ; then
