@@ -166,7 +166,7 @@ $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN
 $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 
 # Torrents
-$IPT -A OUTPUT -o $IF -p udp --sport 6881-6886 -j ACCEPT
+$IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
 
 # Default output log rule
 if [ $firewall_quiet == "no" ] ; then
@@ -206,8 +206,8 @@ $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIREC
 $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
 
-# Do not torrify torrent
-$IPT -t nat -A OUTPUT -p udp --dport 6881-6886 -j RETURN
+# Do not torrify torrent - not sure this is required
+# $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j RETURN
 
 # Don't nat the tor process on local network
 $IPT -t nat -A OUTPUT -o lo -j RETURN
