@@ -225,3 +225,14 @@ done
 $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
+
+# if Docker
+if [ $docker_use == "yes" ] ; then
+
+  # allow local server 80
+  $IPT -A OUTPUT -s 172.18.0.1/16 -d 172.18.0.1/16 -p tcp -m tcp --dport 80 -j ACCEPT
+
+  # allow local database on 5432
+  $IPT -A OUTPUT -s 172.18.0.1/16 -d 172.18.0.1/16 -p tcp -m tcp --dport 5432 -j ACCEPT
+
+fi
