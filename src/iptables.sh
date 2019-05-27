@@ -42,6 +42,11 @@ tor_uid=$(searchTorUid)
 backupFiles "$BACKUP_FILES"
 
 ####################################################
+# if docker
+
+docker_v4=$docker_ipv4
+
+####################################################
 # TOR vars
 
 readonly torrc="/etc/tor/torrc"
@@ -80,7 +85,7 @@ fi
 readonly virt_tor=$(grep VirtualAddrNetworkIPv4 $torrc | awk '{print $2}')
 
 # non Tor addr
-readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
+readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_v4 192.168.0.0/16"
 
 # Just to be sure :)
 [[ -z $trans_port ]] && die "No TransPort value found on $torrc"
@@ -207,7 +212,7 @@ $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
 $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
 
 # Do not torrify torrent - not sure this is required
-# $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j RETURN
+$IPT -t nat -A OUTPUT -p udp -m multiport --dports 6881,6882,6883,6884,6885,6886 -j RETURN
 
 # Don't nat the tor process on local network
 $IPT -t nat -A OUTPUT -o lo -j RETURN
