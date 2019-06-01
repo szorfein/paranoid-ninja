@@ -173,6 +173,13 @@ $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
 
+# sshuttle use the port 12300 and down if taken
+if [ $sshuttle_use == "yes" ] ; then
+  for i in $(seq 12298 12300) ; do
+    $IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+  done
+fi
+
 # Default output log rule
 if [ $firewall_quiet == "no" ] ; then
   $IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
@@ -239,5 +246,4 @@ if [ $docker_use == "yes" ] ; then
 
   # allow local database on 5432
   $IPT -A OUTPUT -s 172.18.0.1/16 -d 172.18.0.1/16 -p tcp -m tcp --dport 5432 -j ACCEPT
-
 fi

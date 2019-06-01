@@ -267,3 +267,7 @@ $NFT add rule nat output ip protocol udp counter redirect to $trans_port
 ########################################################
 # BLOCK IP
 # echo "[+] Setting up blocking IPS..."
+
+if [ $sshuttle_use == "yes" ] ; then
+  addInet output oifname $IF tcp dport 12300 counter accept
+fi

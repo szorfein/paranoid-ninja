@@ -74,3 +74,9 @@ timezone_dir=(/usr/share/zoneinfo/*/*)
 docker_use="no"
 # Private adress here, on gentoo, it's use 172.17.0.0/16
 docker_ipv4="172.17.0.0/16"
+
+#########################################################
+# sshuttle, firewall rules
+
+sshuttle_use="no"
+sshuttle_service_name="sshuttle.service"

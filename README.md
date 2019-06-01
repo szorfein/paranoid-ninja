@@ -14,7 +14,6 @@ The wifi daemon require `wpa_supplicant`.
 
 ## TODO List
 + Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()
-+ Create an ssh tunnel socks5 to connect tor via Socks5Proxy to make a [User] -> [SSH] -> [Tor] -> [Internet] or setup a VPN with wireguard ?
 
 ## Dependencies
 #### Archlinux
@@ -48,6 +47,18 @@ If install, edit the config file at `/etc/paranoid-ninja/paranoid.conf`.
 + Your preferer firewall: `firewall="nftables"`
 + If want forge a random timezone only: `randomize=( "timezone" )`
 + Change the username: `# sed -i "s:brakk:your_username:g" /etc/paranoid-ninja/paranoid.conf`
+
+# Sshuttle (WORKFLOW)
+There are a temporary working example of `sshuttle.service` in the [systemd dir](https://github.com/szorfein/paranoid-ninja/tree/master/systemd), you have to manually edit and copy this file at `/lib/systemd/system` or `/usr/lib/systemd/system`, depend of your system and create a ssh key for the root at `/root/.ssh/id_ed2559`.  
+
+## Systemd service
+The script install 2 services, for ethernet card:
+
+    # systemctl start paranoid@<interface>
+
+And wifi card:
+
+    # systemctl start paranoid-wifi@<interface>
 
 ## Usage
 

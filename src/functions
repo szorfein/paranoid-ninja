@@ -293,15 +293,33 @@ testTor() {
 #######################################################
 # Other Daemon
 
-loadTor() {
-  local if_tor
-  if_tor=$(pgrep -x tor)
-  if [[ -z $if_tor ]] ; then
-    $SYSTEMCTL start tor &
+launchService() {
+  local if_here
+  if if_here=$(pgrep -x $1) ; then
+    echo "[+] Starting $1 ..."
+    $SYSTEMCTL start $1 &
     wait $!
   else
-    echo "[+] Restarting tor ..."
-    $SYSTEMCTL restart tor &
+    echo "[+] Restarting $1 ..."
+    $SYSTEMCTL restart $1 &
     wait $!
   fi
+}
+
+loadTor() {
+  local TOR
+  if TOR=$(which tor) ; then
+    launchService tor
+  fi
+}
+
+restartDocker() {
+  local DOCKER
+  if [[ DOCKER=$(which docker) ]] && [[ $docker_use == "yes" ]] ; then
+    launchService docker
+  fi
+}
+
+restartDaemons() {
+  restartDocker
 }

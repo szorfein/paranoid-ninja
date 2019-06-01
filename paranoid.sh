@@ -89,7 +89,6 @@ firewall() {
     die "$firewall Not a valid firewall"
   fi
   loadTor
-  testTor
 }
 
 ######################################################
@@ -124,7 +123,6 @@ useBackup() {
     echo "[-] no firewall $firewall found."
   fi
   loadTor
-  testTor
 }
 
 ######################################################
@@ -138,6 +136,7 @@ stopFirewall() {
   else
     die "$firewall is no valid"
   fi
+  loadTor
 }
 
 ######################################################
@@ -228,22 +227,24 @@ while [ "$#" -gt 0 ] ; do
   esac
 done
 
-if [[ $FIREWALL == true ]] && [[ $CONF ]] ; then
-  firewall
-fi
-
-if [[ $RAND ]] && [[ $CONF ]] ; then
-  randomize
-fi
-
-if [[ $BACKUP == true ]] && [[ $CONF ]] ; then
-  useBackup
-fi
-
-if [[ $STOP == true ]] ; then
-  stopFirewall
-fi
-
 if [[ $STATUS == true ]] ; then
   testTor
+else
+  if [[ $FIREWALL == true ]] && [[ $CONF ]] ; then
+    firewall
+  fi
+
+  if [[ $RAND ]] && [[ $CONF ]] ; then
+    randomize
+  fi
+
+  if [[ $BACKUP == true ]] && [[ $CONF ]] ; then
+    useBackup
+  fi
+
+  if [[ $STOP == true ]] ; then
+    stopFirewall
+  fi
+
+  restartDaemons
 fi

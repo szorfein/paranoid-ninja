@@ -1,0 +1,13 @@
+[Unit]
+Description=Create a transparent proxy over SSH with sshuttle
+Requires=tor.service
+PartOf=tor.service
+After=tor.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+ExecStart=/usr/bin/sshuttle -l 0.0.0.0 --method nat --dns -vr username@localhost 0/0 -e "ssh -i /root/.ssh/id_ed25519"
+
+[Install]
+WantedBy=multi-user.target
