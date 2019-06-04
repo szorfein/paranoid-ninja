@@ -315,8 +315,8 @@ loadTor() {
 
 restartDocker() {
   local DOCKER
-  if [[ DOCKER=$(which docker) ]] && [[ $docker_use == "yes" ]] ; then
-    launchService docker
+  if DOCKER=$($SYSTEMCTL is-enabled docker) ; then
+    $SYSTEMCTL restart docker
   fi
 }
 

@@ -177,6 +177,12 @@ $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886
 if [ $sshuttle_use == "yes" ] ; then
   for i in $(seq 12298 12300) ; do
     $IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+
+    if [ $docker_use == "yes" ] ; then
+      $IPT -A INPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A OUTPUT -s $docker_ipv4 -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+    fi
   done
 fi
 
@@ -242,8 +248,8 @@ $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 if [ $docker_use == "yes" ] ; then
 
   # allow local server 80
-  $IPT -A OUTPUT -s 172.18.0.1/16 -d 172.18.0.1/16 -p tcp -m tcp --dport 80 -j ACCEPT
+  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv46 -p tcp -m tcp --dport 80 -j ACCEPT
 
   # allow local database on 5432
-  $IPT -A OUTPUT -s 172.18.0.1/16 -d 172.18.0.1/16 -p tcp -m tcp --dport 5432 -j ACCEPT
+  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
 fi

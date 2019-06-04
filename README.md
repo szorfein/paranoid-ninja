@@ -22,12 +22,9 @@ The wifi daemon require `wpa_supplicant`.
 
 And add `iptables` or `nftables`. `wpa_supplicant` if use wifi.
 
-#### Gentoo
+#### Gentoo ([ebuild](https://github.com/szorfein/paranoid-ninja/tree/master/packages))
 
-    # euse -E urandom systemd
-    # emerge -av net-misc/ipcalc net-vpn/tor sys-apps/iproute2 sys-apps/coreutils 
-
-And add `net-firewall/iptables` or `net-firewall/nftables`, `net-wireless/wpa_supplicant` if use wifi.
+    # emerge -av paranoid-ninja
 
 #### Other distribs
 The name of the packages may be different but need:  
@@ -48,8 +45,9 @@ If install, edit the config file at `/etc/paranoid-ninja/paranoid.conf`.
 + If want forge a random timezone only: `randomize=( "timezone" )`
 + Change the username: `# sed -i "s:brakk:your_username:g" /etc/paranoid-ninja/paranoid.conf`
 
-# Sshuttle (WORKFLOW)
+## Sshuttle (WORKFLOW)
 There are a temporary working example of `sshuttle.service` in the [systemd dir](https://github.com/szorfein/paranoid-ninja/tree/master/systemd), you have to manually edit and copy this file at `/lib/systemd/system` or `/usr/lib/systemd/system`, depend of your system and create a ssh key for the root at `/root/.ssh/id_ed2559`.  
+A complete howto can be found [here](https://github.com/szorfein/Gentoo-ZFS/wiki/12.privacy).  
 
 ## Systemd service
 The script install 2 services, for ethernet card:
