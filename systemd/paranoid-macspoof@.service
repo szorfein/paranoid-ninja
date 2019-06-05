@@ -7,6 +7,7 @@ After=sys-subsystem-net-devices-%i.device
 
 [Service]
 Type=oneshot
+TimeoutSec=30
 ExecStart=/usr/bin/paranoid-ninja -m -c /etc/paranoid-ninja/paranoid.conf
 
 [Install]
