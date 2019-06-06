@@ -8,9 +8,10 @@ Apply a Transparent proxy through Tor with nftables or iptables and optionnaly c
 #### Firewall
 Add basic and secure rules for nftables or iptables, inspired by project like [TOR transparent-proxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy), [anonsurf](https://github.com/ParrotSec/anonsurf), [kalitorify](https://github.com/brainfucksec/kalitorify.git), [iptables-essential](https://github.com/trimstray/iptables-essentials). 
 
-#### Systemd
-The daemon work with systemd, i created a service for ethernet and wifi card.  
-The wifi daemon require `wpa_supplicant`.  
+## Test if it work
++ [Are you using tor ?](https://check.torproject.org/)
++ [torrent ip](http://ipmagnet.services.cbcdn.com)
++ [dns leak](https://www.dnsleaktest.com)
 
 ## TODO List
 + Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()
@@ -41,7 +42,7 @@ If install, edit the config file at `/etc/paranoid-ninja/paranoid.conf`.
 
 + Your network card: `net_device="wlp2s0"`
 + The target router: `target_router="192.168.1.1"`
-+ Your preferer firewall: `firewall="nftables"`
++ Your favorite firewall: `firewall="iptables"`
 + If want forge a random timezone only: `randomize=( "timezone" )`
 + Change the username: `# sed -i "s:brakk:your_username:g" /etc/paranoid-ninja/paranoid.conf`
 
