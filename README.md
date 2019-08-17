@@ -12,6 +12,7 @@ Add basic and secure rules for nftables or iptables, inspired by project like [T
 + [Are you using tor ?](https://check.torproject.org/)
 + [torrent ip](http://ipmagnet.services.cbcdn.com)
 + [dns leak](https://www.dnsleaktest.com)
++ [Ip info](https://whoer.net/#)
 
 ## TODO List
 + Stop the web browser, clean cache, and restore (Not easy with firejail and bleachbit do not support all web browsers :()

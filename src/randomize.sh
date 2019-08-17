@@ -9,7 +9,6 @@ SYS=$(which systemctl)
 IP=$(which ip)
 IPCALC=$(which ipcalc)
 SHUF=$(which shuf)
-TOR=$(which tor)
 HEXDUMP=$(which hexdump)
 DD=$(which dd)
 TR=$(which tr)
@@ -25,10 +24,7 @@ BACKUP_FILES="/etc/hosts /etc/hostname"
 [[ -z $HOSTNAME ]] && die "command hostname is no found"
 [[ -z $SYS ]] && die "systemd is no found, plz install"
 [[ -z $IP ]] && die "iproute2 is no found, plz install"
-[[ -z $TOR ]] && die "tor is no found, plz install"
 
-checkArgConfig $1 $2
-CONF="$2"
 checkRoot
 
 #######################################################
@@ -147,8 +143,8 @@ changeIp() {
     $IP addr add $new_ip broadcast $broad dev $net_device
     $IP route add default via $target_router dev $net_device
     # restart the firewall
-    [[ $firewall == "nftables" ]] && . $LIB_DIR/nftables.sh -c $CONF
-    [[ $firewall == "iptables" ]] && . $LIB_DIR/iptables.sh -c $CONF
+    #[[ $firewall == "nftables" ]] && . $LIB_DIR/nftables.sh -c $CONF
+    #[[ $firewall == "iptables" ]] && . $LIB_DIR/iptables.sh -c $CONF
   else
     echo "[Err] The address $new_ip is incorrect"
     exit 1
@@ -187,16 +183,13 @@ fi
  
 backupFiles "$BACKUP_FILES"
 
-if [[ "$3" == "mac" ]] ; then
-  changeMac
-else
-  # variable from paranoid.conf
-  for a in "${randomize[@]}" ; do
-    [[ $a == "mac" ]] && changeMac
-    [[ $a == "hostname" ]] && randHost
-    [[ $a == "timezone" ]] && randTimezone
-    [[ $a == "priv_ip" ]] && updIp
-  done
-fi
-
-echo "[*] Relaunch your web browser is recommended"
+while [ "$#" -gt 0 ] ; do
+  case "$1" in
+    -c | --conf ) CONF=${2:-/etc/paranoid-ninja/paranoid.conf} ; shift ; shift ;;
+    -h | --hostname ) randHost ; shift ;;
+    -i | --ip ) updIp ; shift ;;
+    -m | --mac ) changeMac ; shift ;;
+    -t | --timezone ) randTimezone ; shift ;;
+    *) die "Unknown arg $1" ;;
+  esac
+done

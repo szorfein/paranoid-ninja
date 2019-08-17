@@ -39,22 +39,6 @@ checkConfigFile() {
   fi
 }
 
-checkArgConfig() {
-  [[ "$#" -eq 0 ]] && die "call $0 with -c paranoid.conf"
-  while [ "$#" -gt 0 ] ; do
-    case "$1" in 
-      -c | --config)
-        checkConfigFile $2
-        shift
-        ;;
-      -- | -* | *)
-        die "call $0 with -c paranoid.conf"
-        ;;
-    esac
-    shift
-  done
-}
-
 #######################################################
 # Backup
 
@@ -130,14 +114,12 @@ iptReload() {
 
 searchTorUid() {
   local tor_uid
-  id -u debian-tor > /dev/null 2>&1
-  [[ $? -eq 0 ]] && tor_uid=$(id -u debian-tor)
-
-  id -u tor > /dev/null 2>&1
-  [[ $? -eq 0 ]] && tor_uid=$(id -u tor)
-
-  [[ -z $tor_uid ]] && die "tor_uid no found"
-  echo $tor_uid
+  if tor_uid=$(id -u debian-tor 2>&1 | grep "^[0-9]") ||
+    tor_uid=$(id -u tor 2>&1 | grep "^[0-9]") ; then
+      echo $tor_uid
+  else
+    die "$0: tor_uid no found"
+  fi
 }
 
 clearIptables() {
@@ -178,7 +160,7 @@ addXauth() {
 
 checkXauth() {
   local dpy new_dpy proto hexkey new_host ifarg
-  [[ ! -z $1 ]] && ifarg="$1" || ifarg="unix"
+  ifarg="${1:-unix}"
   new_host=$(cat /etc/hostname | head -n 1)
   dpy=$($XAUTH_COM list | grep $ifarg | awk '{print $1}')
   proto=$($XAUTH_COM list | grep $ifarg | awk '{print $2}')
@@ -286,8 +268,8 @@ testTor() {
     checkIp
   else
     echo "[-] Unfortunately, Tor is no working"
-    exit 0
   fi
+  exit 0
 }
 
 #######################################################
@@ -295,31 +277,19 @@ testTor() {
 
 launchService() {
   local if_here
+  echo "check service $1"
   if if_here=$(pgrep -x $1) ; then
-    echo "[+] Starting $1 ..."
-    $SYSTEMCTL start $1 &
-    wait $!
-  else
     echo "[+] Restarting $1 ..."
-    $SYSTEMCTL restart $1 &
-    wait $!
+    $SYSTEMCTL restart $1
+    sleep 3
   fi
 }
 
-loadTor() {
-  local TOR
-  if TOR=$(which tor) ; then
-    launchService tor
-  fi
-}
-
-restartDocker() {
-  local DOCKER
-  if DOCKER=$($SYSTEMCTL is-enabled docker) ; then
-    $SYSTEMCTL restart docker
-  fi
-}
-
+#  launchService ${sshuttle_service_name%.*}
 restartDaemons() {
-  restartDocker
+  #local daemon daemons="tor docker sshuttle"
+  local daemon daemons="tor docker"
+  for daemon in $daemons ; do
+    launchService $daemon
+  done
 }

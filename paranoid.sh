@@ -1,7 +1,14 @@
 #!/bin/sh
 
 STOP=false
-STATUS=false
+TOR=true
+BACKUP=false
+SILENT=true
+
+R_HOST=false
+R_IP=false
+R_MAC=false
+R_TIMEZONE=false
 
 # Bins
 NFT=$(which nft)
@@ -82,26 +89,40 @@ EOF
 
 firewall() {
   if [[ $firewall == "nftables" ]] ; then 
-    . $LIB_DIR/nftables.sh -c $CONF
+    . $LIB_DIR/nftables.sh -c $CONF 
   elif [[ $firewall == "iptables" ]] ; then
-    . $LIB_DIR/iptables.sh -c $CONF
+    if ! $TOR ; then
+      echo "paranoid-ninja, i disable tor : $TOR"
+      . $LIB_DIR/iptables.sh -c $CONF --disable
+    else
+      echo "paranoid-ninja, i enable tor : $TOR"
+      . $LIB_DIR/iptables.sh -c $CONF
+    fi
   else
     die "$firewall Not a valid firewall"
   fi
-  loadTor
+  #loadTor
 }
 
 ######################################################
 # Randomize
 
 randomize() {
-  if [ $RAND == "mac" ] ; then
-    . $LIB_DIR/randomize.sh -c $CONF $RAND
-  elif [ $RAND == "rand-only" ] ; then
-    . $LIB_DIR/randomize.sh -c $CONF
-  else
-    . $LIB_DIR/randomize.sh -c $CONF
-    loadTor
+  if $R_HOST ; then 
+    echo "$0 call randomize.sh --hostname"
+    . $LIB_DIR/randomize.sh --conf $CONF --hostname
+  fi
+  if $R_MAC ; then
+    echo "$0 call randomize.sh --mac"
+    . $LIB_DIR/randomize.sh --conf $CONF --mac
+  fi
+  if $R_TIMEZONE ; then
+    echo "$0 call randomize.sh --timezone"
+    . $LIB_DIR/randomize.sh --conf $CONF --timezone
+  fi
+  if $R_IP ; then
+    echo "$0 call randomize.sh --ip"
+    . $LIB_DIR/randomize.sh --conf $CONF --ip
   fi
 }
 
@@ -109,6 +130,7 @@ randomize() {
 # reload backup files
 
 useBackup() {
+  echo "$0 call useBackup , backup : $BACKUP"
   local hostname
   hostname="$(cat $BACKUP_DIR/hostname | head -n 1)"
   [[ ! -z $hostname ]] && writeHost $hostname
@@ -122,7 +144,7 @@ useBackup() {
   else
     echo "[-] no firewall $firewall found."
   fi
-  loadTor
+  #loadTor
 }
 
 ######################################################
@@ -136,7 +158,7 @@ stopFirewall() {
   else
     die "$firewall is no valid"
   fi
-  loadTor
+  #loadTor
 }
 
 ######################################################
@@ -146,12 +168,32 @@ menu() {
   banner
 
   printf "${green}%s${endc}\\n" \
-    "-t, --transparent-tor    Transparent-torrify on nftables or iptables"
+    "-b, --restore-backup    Restore your files"
+  echo "usage: $0 [-b] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-p, --transparent-tor    Transparent-torrify on nftables or iptables"
+  echo "usage: $0 [-p] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-H, --hostname    Make a random hostname"
+  echo "usage: $0 [-h] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-i, --ip    Make a random private ip based on your target router, work like dhcpcd but random :)"
+  echo "usage: $0 [-i] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-m, --mac    Make a random mac address"
+  echo "usage: $0 [-m] [-c paranoid.conf]"
+
+  printf "${green}%s${endc}\\n" \
+    "-t, --timezone    Choose a random timezone, look at /usr/share/zoneinfo"
   echo "usage: $0 [-t] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
-    "-r, --randomize    Can randomize host, ip, timezone and mac address"
-  echo "usage: $0 [-r] [-c paranoid.conf]"
+    "-D, --disable-transparent-proxy    Just remove the transparent-proxy throught tor"
+  echo "usage: $0 [-t] [-c paranoid.conf]"
 
   printf "${green}%s${endc}\\n" \
     "-c, --config    Apply your config file, required for all commands"
@@ -162,8 +204,10 @@ menu() {
   echo "usage: $0 [-s]"
 
   printf "${green}%s${endc}\\n" \
-    "-d, --delete    Stop and restore your files"
-  echo "usage: $0 [-d] [-c paranoid.conf]"
+    "-d, --verbose    Display more informations to debug"
+  echo "usage: $0 [-d]"
+
+  exit 0
 }
 
 ######################################################
@@ -177,48 +221,23 @@ fi
 
 while [ "$#" -gt 0 ] ; do
   case "$1" in
-    -t | --transparent-proxy)
-      FIREWALL=true
-      shift
-      ;;
-    -r | --randomize)
-      RAND=true
-      shift
-      ;;
-    -o | --rand-only)
-      RAND="rand-only"
-      shift
-      ;;
-    -m | --mac)
-      RAND="mac"
-      shift
-      ;;
+    -b | --restore-backup) BACKUP=true ; shift ;;
     -c | --config)
       CONF="$2"
       checkConfigFile "$2"
       shift
       shift
       ;;
-    -s | --status)
-      STATUS=true
-      shift
-      ;;
-    -b | --backup)
-      BACKUP=true
-      shift
-      ;;
-    -S | --stop)
-      STOP=true
-      shift
-      ;;
-    -v | --version)
-      echo "print_version"
-      shift
-      ;;
-    -h | --help)
-      menu
-      shift
-      ;;
+    -H | --hostname) R_HOST=true ; shift ;;
+    -i | --ip) R_IP=true ; shift ;;
+    -m | --mac) R_MAC=true; shift ;;
+    -p | --transparent-proxy) FIREWALL=true ; shift ;;
+    -t | --timezone ) R_TIMEZONE=true ; shift ;;
+    -s | --status) testTor ; shift ;;
+    -D | --disable-transparent-proxy) TOR=false ; shift ;;
+    -v | --version) echo "print_version" ; shift ;;
+    -d | --verbose) SILENT=false ; shift ;;
+    -h | --help) menu ; shift ;;
     *)
       printf "%s\\n" "$prog_name: Invalid option '$1'"
       printf "%s\\n" "Try '$prog_name --help' for more information."
@@ -227,24 +246,15 @@ while [ "$#" -gt 0 ] ; do
   esac
 done
 
-if [[ $STATUS == true ]] ; then
-  testTor
-else
-  if [[ $FIREWALL == true ]] && [[ $CONF ]] ; then
-    firewall
-  fi
-
-  if [[ $RAND ]] && [[ $CONF ]] ; then
-    randomize
-  fi
-
-  if [[ $BACKUP == true ]] && [[ $CONF ]] ; then
-    useBackup
-  fi
-
-  if [[ $STOP == true ]] ; then
-    stopFirewall
-  fi
-
-  restartDaemons
+if [ ! -f $CONF ] ; then
+  die "config file no found"
 fi
+
+randomize
+if $FIREWALL ; then firewall ; fi
+if $BACKUP ; then useBackup ; fi
+if $STOP ; then stopFirewall ; fi
+
+restartDaemons
+#sshuttle -r yagdra@localhost 0/0 -e "ssh -i /root/.ssh/id_ed25519" &
+#testTor

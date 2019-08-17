@@ -1,11 +1,16 @@
 #!/bin/sh
 
+# fail on void variable and error
+set -ue
+
 IPT=$(which iptables)
 MODPROBE=$(which modprobe)
 IP=$(which ip)
 SYSTEMCTL=$(which systemctl)
 
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
+
+echo "$0 look variable SILENT : $SILENT"
 
 ####################################################
 # Check Bins
@@ -17,7 +22,13 @@ BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 ####################################################
 # Command line parser
 
-checkArgConfig $1 $2
+while [ "$#" -gt 0 ] ; do
+  case "$1" in
+    -D | --disable) TOR=false ; shift ;;
+    -c | --conf) CONF=$2 ; shift ; shift ;;
+    *) die "$0 unknown arg $1"
+  esac
+done
 checkRoot
 
 ####################################################
@@ -54,31 +65,27 @@ readonly torrc="/etc/tor/torrc"
 [[ ! -f $torrc ]] && die "$torrc no found, TOR isn't install ?"
 
 # Tor transport
-grep TransPort $torrc > /dev/null 2>&1
-if [[ ! $? -eq 0 ]] ; then
+if ! grep TransPort $torrc > /dev/null ; then
   echo "[*] Add new TransPort 9040 to $torrc"
   echo "TransPort 9040 IsolateClientAddr IsolateClientProtocol IsolateDestAddr IsolateDestPort" >> $torrc
 fi
 readonly trans_port=$(grep TransPort $torrc | awk '{print $2}')
 
 # Tor DNSPort
-grep DNSPort $torrc > /dev/null 2>&1
-if [[ ! $? -eq 0 ]] ; then
+if ! grep "^DNSPort" $torrc > /dev/null ; then
   echo "[*] Add new DNSPort 5353 to $torrc"
   echo "DNSPort 5353" >> $torrc
 fi
 readonly dns_port=$(grep DNSPort $torrc | awk '{print $2}')
 
 # Tor AutomapHostsOnResolve
-grep AutomapHostsOnResolve $torrc > /dev/null 2>&1
-if [[ ! $? -eq 0 ]] ; then
+if ! grep AutomapHostsOnResolve $torrc > /dev/null ; then
   echo "[*] Add new AutomapHostsOnResolve 1 to $torrc"
   echo "AutomapHostsOnResolve 1" >> $torrc
 fi
 
 # Tor VirtualAddrNetworkIPv4
-grep VirtualAddrNetworkIPv4 $torrc > /dev/null 2>&1
-if [[ ! $? -eq 0 ]] ; then
+if ! grep VirtualAddrNetworkIPv4 $torrc > /dev/null ; then
   echo "[*] Add VirtualAddrNetworkIPv4 10.192.0.0/10 to $torrc"
   echo "VirtualAddrNetworkIPv4 10.192.0.0/10" >> $torrc
 fi
@@ -122,14 +129,14 @@ echo "[+] Setting up $firewall rules ..."
 ####################################################
 # Input chain
 
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A INPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A INPUT -m state --state INVALID -j DROP
 $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Anti-spoofing
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A INPUT -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
 fi
 $IPT -A INPUT -i $IF ! -s $INT_NET -j DROP
@@ -138,9 +145,10 @@ $IPT -A INPUT -i $IF ! -s $INT_NET -j DROP
 $IPT -A INPUT -i lo -j ACCEPT
 $IPT -A INPUT -i $IF -p tcp -s $INT_NET --dport 22 --syn -m state --state NEW -j ACCEPT
 $IPT -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+$IPT -A INPUT -i $IF -p udp -s $INT_NET --dport $dns_port -j ACCEPT
 
 # default input log rule
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
@@ -148,14 +156,14 @@ fi
 # Output chain
 
 # Tracking rules
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A OUTPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A OUTPUT -m state --state INVALID -j DROP
 $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Accept rules out
-#$IPT -A OUTPUT -o lo -j ACCEPT
+$IPT -A OUTPUT -o lo -j ACCEPT
 $IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
 
 # Allow Tor process output
@@ -173,21 +181,38 @@ $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
 
-# sshuttle use the port 12300 and down if taken
-if [ $sshuttle_use == "yes" ] ; then
-  for i in $(seq 12298 12300) ; do
-    $IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+$IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $trans_port -j ACCEPT
+$IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $dns_port -j ACCEPT
+$IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --sport $dns_port --dport $trans_port -j ACCEPT
 
-    if [ $docker_use == "yes" ] ; then
-      $IPT -A INPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
-      $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
-      $IPT -A OUTPUT -s $docker_ipv4 -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
-    fi
-  done
+# sshuttle
+for i in $(seq 12298 12300) ; do
+  #$IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m multiport --dports 12300,12299,12298 -j ACCEPT
+  $IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+
+  if [ $docker_use == "yes" ] ; then
+    $IPT -A INPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
+
+    $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
+    $IPT -A OUTPUT -s $docker_ipv4 -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+  fi
+done
+
+# if Docker
+if [ $docker_use == "yes" ] ; then
+
+  # allow local server 80
+  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
+
+  # allow local database on 5432
+  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
 fi
 
+# freenode 7000
+$IPT -A OUTPUT -p tcp -m tcp --dport 7000 -j ACCEPT
+
 # Default output log rule
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
@@ -195,14 +220,14 @@ fi
 # Forward chain
 
 # Tracking rule
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A FORWARD -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A FORWARD -m state --state INVALID -j DROP
 $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Anti-spoofing rule
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A FORWARD -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
 fi
 $IPT -A FORWARD -i $IF ! -s $INT_NET -j DROP
@@ -210,46 +235,42 @@ $IPT -A FORWARD -i $IF ! -s $INT_NET -j DROP
 # Accept rule
 
 # Default log rule
-if [ $firewall_quiet == "no" ] ; then
+if ! $SILENT ; then
   $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
 ####################################################
 # NAT chain
 
-$IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
-$IPT -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $dns_port
-$IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIRECT --to-ports $dns_port
+if $TOR ; then
+  echo "Active transparent proxy throught tor"
+  echo "Nat rules tor_uid: $tor_uid, dns: $dns_port, trans: $trans_port, virt: $virt_tor"
+  $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
+  $IPT -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $dns_port
+  $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIRECT --to-ports $dns_port
 
-$IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
-$IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
 
-# Do not torrify torrent - not sure this is required
-$IPT -t nat -A OUTPUT -p udp -m multiport --dports 6881,6882,6883,6884,6885,6886 -j RETURN
+  # Do not torrify torrent - not sure this is required
+  $IPT -t nat -A OUTPUT -p udp -m multiport --dports 6881,6882,6883,6884,6885,6886 -j RETURN
 
-# Don't nat the tor process on local network
-$IPT -t nat -A OUTPUT -o lo -j RETURN
+  # Don't nat the tor process on local network
+  $IPT -t nat -A OUTPUT -o lo -j RETURN
 
-# Allow lan access for non_tor 
-for lan in $non_tor 127.0.0.0/9 127.128.0.0/10; do
-  $IPT -t nat -A OUTPUT -d "$lan" -j RETURN
-done
+  # Allow lan access for non_tor 
+  for lan in $non_tor 127.0.0.0/9 127.128.0.0/10; do
+    $IPT -t nat -A OUTPUT -d "$lan" -j RETURN
+  done
 
-for _iana in $_resv_iana ; do
-  $IPT -t nat -A OUTPUT -d "$_iana" -j RETURN
-done
+  #for _iana in $_resv_iana ; do
+  #  $IPT -t nat -A OUTPUT -d "$_iana" -j RETURN
+  #done
 
-# Redirect all other output to TOR
-$IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
-$IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
-$IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
-
-# if Docker
-if [ $docker_use == "yes" ] ; then
-
-  # allow local server 80
-  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv46 -p tcp -m tcp --dport 80 -j ACCEPT
-
-  # allow local database on 5432
-  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
+  # Redirect all other output to TOR
+  $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 fi
+
+echo "Setting iptable ended"
