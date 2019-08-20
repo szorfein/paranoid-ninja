@@ -14,27 +14,22 @@ randomize=( "mac" "hostname" "timezone" "priv_ip" )
 net_device="wlp2s0"
 
 # Need to reconfigure your static ip
-target_router="192.168.2.1"
-
-# If want dhcpcd, change to yes but your ip 
-# cannot be randomize
-want_dhcpcd="no"
+target_router="192.168.1.1"
 
 # Static ip
-# You can choose "random" or set an real ip
-# ex: static="192.168.1.111" do not add a subnet
+# You can choose "random", "dhcp" or set an real static ip
+# ex: static="192.168.1.111" (do not add a subnet)
 static_ip="random"
 
 # Firewall used
 # Options are nftables or iptables
-firewall="nftables"
+firewall="iptables"
 
 # Show firewall log, "yes" or "no"
 firewall_quiet="yes"
 
-# Like static_ip
-# You can create a static address like 11:11:11:11:11:11
-# or random
+# static_mac
+# You can choose "random" or set a static address like "11:11:11:11:11:11"
 static_mac="random"
 
 #########################################################
