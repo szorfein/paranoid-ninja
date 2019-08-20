@@ -24,15 +24,113 @@ checkRoot
 
 #######################################################
 # Randomize the link /etc/localtime from systemd
+# from paranoid.conf, need $zoneinfo_dir , $timezone_dir
 
-randTimezone() {
-  local rand1 old
-  old=$(file $LOCALTIME | awk '{print $5}')
-  rand1="${timezone_dir[RANDOM % ${#timezone_dir[@]}]}"
-  [[ -s $LOCALTIME ]] && rm $LOCALTIME
-  ln -s $rand1 $LOCALTIME
-  ${HWC} --systohc || die "hwclock fail"
-  echo "[+] Changed timezone ${old##*/} from ${rand1##*/}"
+monthName() {
+  case ${1#0} in 
+    Jan*) echo 01 ;;
+    Feb*) echo 02 ;;
+    Mar*) echo 03 ;;
+    Apr*) echo 04 ;;
+    May*) echo 05 ;;
+    Jun*) echo 06 ;;
+    Jul*) echo 07 ;;
+    Aug*) echo 08 ;;
+    Sep*) echo 09 ;;
+    Oct*) echo 10 ;;
+    Nov*) echo 11 ;;
+    Dec*) echo 12 ;;
+    *) return 5 ;;
+  esac
+}
+
+# split format like "Sunday, August 18, 2019, week 33" 
+splitDate() {
+  oldIFS=$IFS # save older value
+  IFS=', ' # new separator field
+  set -- $1 # split $1
+  IFS=$oldIFS # restore old value of IFS
+  dayname="${1#0}"
+  month="$(monthName ${2#0})"
+  day="${3#0}"
+  year="${4#0}"
+}
+
+checkTimeAndDate() {
+  if time=$(cat /tmp/time-$PID.html | grep "[0-9]*:[0-9]*:[0-9]*" -o) ; then
+    :
+  else
+    die "Time no found"
+  fi
+
+  if date="$(cat /tmp/time-$PID.html | grep -io "[a-z]*, [a-z]* [0-9]*, [0-9]*, [a-z]* [0-9]*")" ; then
+    splitDate "$date"
+    # date $month$day$(echo ${time%:*} | tr -d :)$year , old date format MMDDHHMMYEAR
+    timedatectl set-time "$year-$month-$day $time"
+    log "Set time of $city $year-$month-$day $time"
+  else 
+    die "Date no found"
+  fi
+}
+
+savePage() {
+  PID=$$ 
+  if [ $(ls /tmp/time-* | wc -l) -gt 5 ] ; then rm /tmp/time-* ; fi
+  #curl -s https://time.is/${city:-Paris} -o /tmp/time-$PID.html
+  wget --quiet --https-only --no-cookies \
+    --user-agent="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.3) Gecko/2008092416 Firefox/3.0.3" \
+    https://time.is/${city-:Paris} -O /tmp/time-$PID.html || 
+    die "Can't download https://time.is/${city}..."
+}
+
+setTheTimezone() {
+  if [ -f $zoneinfo_dir/$country/$city ] ; then
+    timedatectl set-timezone "$country/$city"
+    log "Set timezone $country/$city"
+  else
+    die "Timezone $country/$city is no found"
+  fi
+}
+
+genRandTimezone() {
+  t_cut="${timezone_dir[RANDOM % ${#timezone_dir[@]}]}"
+  t_cut="${t_cut#/*/*/*/*}"
+  country=${t_cut%/*}
+  city=${t_cut#*/}
+  t_cut=
+}
+
+genTimezoneWithIp() {
+  if timezone=$(curl -s https://freegeoip.app/json/) ; then
+    t_cut=$(echo $timezone | jq '.time_zone' | tr -d \")
+    country=${t_cut%/*}
+    city=${t_cut#*/}
+  else
+    die "No found timezone on freegeoip.app"
+  fi
+  t_cut=
+}
+
+selectATimezone() {
+  if testPing ; then
+    log "Network work, check timezone based on your ip..."
+    genTimezoneWithIp
+    setTheTimezone
+    savePage # for the time and date
+    checkTimeAndDate
+  else
+    log "Network doesn't work, build a random timezone..."
+    genRandTimezone
+    setTheTimezone
+  fi
+}
+
+updTimezone() {
+  title "Change timezone"
+  checkRoot
+  checkBins wget jq timedatectl
+  [ -d $zoneinfo_dir ] || die "zoneinfo dir no found at $zoneinfo_dir"
+  selectATimezone
 }
 
 #######################################################
@@ -206,7 +304,7 @@ while [ "$#" -gt 0 ] ; do
     -h | --hostname ) randHost ; shift ;;
     -i | --ip ) updIp ; shift ;;
     -m | --mac ) updMac ; shift ;;
-    -t | --timezone ) randTimezone ; shift ;;
+    -t | --timezone ) updTimezone ; shift ;;
     *) die "Unknown arg $1" ;;
   esac
 done

@@ -265,6 +265,14 @@ writeHost() {
 #######################################################
 # Check network
 
+testPing() {
+  if ping -q -c 1 gentoo.org > /dev/null ; then
+    :
+  else
+    return 1
+  fi
+}
+
 checkIp() {
   local ext_ip
   printf "%s %s\\n" \

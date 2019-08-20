@@ -106,6 +106,7 @@ firewall() {
     die "$firewall Not a valid firewall"
   fi
   RESTART=true
+  #loadTor
 }
 
 ######################################################
@@ -149,6 +150,7 @@ useBackup() {
   else
     echo "[-] no firewall $firewall found."
   fi
+  #loadTor
 }
 
 ######################################################
@@ -162,6 +164,7 @@ stopFirewall() {
   else
     die "$firewall is no valid"
   fi
+  #loadTor
 }
 
 ######################################################
@@ -207,7 +210,7 @@ menu() {
   echo "usage: $0 [-s]"
 
   printf "${green}%s${endc}\\n" \
-    "-q, --quiet    Disable messages during the execution"
+    "-d, --verbose    Display more informations to debug"
   echo "usage: $0 [-d]"
 
   exit 0
@@ -259,3 +262,6 @@ if $BACKUP ; then useBackup ; fi
 if $STOP ; then stopFirewall ; fi
 
 if $RESTART ; then restartDaemons ; fi
+
+#sshuttle -r yagdra@localhost 0/0 -e "ssh -i /root/.ssh/id_ed25519" &
+#testTor

@@ -59,8 +59,12 @@ other_host_files="/home/brakk/.offlineimaprc"
 prefix_hostname=( "star-" "comet-" "nebula-" "blackhole-" "android-" )
 suffix_hostname=( "-macbookpro" "-iphone" )
 
+#########################################################
+# Timezone options
+
 # directory contain all timezone
-timezone_dir=(/usr/share/zoneinfo/*/*)
+zoneinfo_dir=/usr/share/zoneinfo
+timezone_dir=($zoneinfo_dir/*/*)
 
 #########################################################
 # Docker, firewall rules

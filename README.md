@@ -64,20 +64,18 @@ And wifi card:
 
     # paranoid-ninja -h
 
-### Options
+### Examples
 
-    -t, --transparent-proxy  | Require arg  -c, --config <file.conf>
+**Randomize all**:
 
-Apply only a transparent proxy through tor with nftables or iptables
+    # paranoid-ninja -m -i -p -H -t -c /etc/paranoid-ninja/paranoid.conf
 
-    -r, --randomize  | Require arg -c, --config <file.conf>
+Will randomize the MAC address (`-m`), the ip address (`-i`), apply a transparent proxy (`-p`), change the hostname (`-H`), and change the time zone (`-t`).  
 
-Look the config file, can forge a random MAC, hostname, ip, timezone and apply a transparent proxy through tor too
+All command need `-c /etc/paranoid-ninja/paranoid.conf` except with `-s|--status`.  
 
-    -s, --status
+**Update your timezone by looking your ip address**:  (need a working connection)
 
-Check if tor work and display your current ip address
+    # paranoid-ninja -t -c /etc/paranoid-ninja/paranoid.conf
 
-    -d, --delete
 
-Restore your files and try to restore your firewall rule if any
