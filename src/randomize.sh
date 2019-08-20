@@ -6,11 +6,7 @@ HOSTNAME=$(which hostname)
 XAUTH=$(which xauth)
 CHOWN=$(which chown)
 SYS=$(which systemctl)
-IP=$(which ip)
-IPCALC=$(which ipcalc)
-SHUF=$(which shuf)
 HEXDUMP=$(which hexdump)
-DD=$(which dd)
 TR=$(which tr)
 HEAD=$(which head)
 
@@ -23,7 +19,6 @@ BACKUP_FILES="/etc/hosts /etc/hostname"
 [[ -z $HWC ]] && die "util-linux is no found, plz install"
 [[ -z $HOSTNAME ]] && die "command hostname is no found"
 [[ -z $SYS ]] && die "systemd is no found, plz install"
-[[ -z $IP ]] && die "iproute2 is no found, plz install"
 
 checkRoot
 
@@ -75,95 +70,117 @@ randHost() {
 
 #######################################################
 # Randomize the MAC address
+# from paranoid.conf, need variable $net_device , $static_mac
+
+setMac() {
+  ip link set dev $net_device down
+  sleep 1
+  ip link set dev $net_device address $mac
+  ip link set dev $net_device up
+  sleep 1
+  log "Changed MAC $old to $mac"
+  old= mac=
+}
 
 changeMac() {
-  local mac old lastfive firstbyte
-  $IP link show $net_device > /dev/null 2>&1
-  if [ $? -eq 0 ] ; then
-    if [[ $static_mac ]] && [[ $static_mac == "random" ]] ; then
-      old=$($IP link show $net_device | grep -i ether | awk '{print $2}')
-      mac=$(echo -n ""; $DD bs=1 count=1 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 "%02X"')
-      mac+=$(echo -n ""; $DD bs=1 count=5 if=/dev/urandom 2>/dev/null | $HEXDUMP -v -e '/1 ":%02X"')
-      # Get solution here to create a valid MAC address:
-      # https://unix.stackexchange.com/questions/279910/how-go-generate-a-valid-and-random-mac-address
-      lastfive=$( echo "$mac" | cut -d: -f 2-6 )
-      firstbyte=$( echo "$mac" | cut -d: -f 1 )
-      firstbyte=$( printf '%02X' $(( 0x$firstbyte & 254 | 2)) )
-      mac="$firstbyte:$lastfive"
-    else
-      mac="$static_mac"
-    fi
-    $IP link set dev $net_device down
-    sleep 1
-    $IP link set dev $net_device address $mac
-    $IP link set dev $net_device up
-    sleep 1
-    echo "[+] Changed MAC $old to $mac"
+  local lastfive firstbyte
+  if [[ $static_mac == "random" ]] ; then
+    old=$(ip link show $net_device | grep -i ether | awk '{print $2}')
+    mac=$(echo -n ""; dd bs=1 count=1 if=/dev/urandom 2>/dev/null | hexdump -v -e '/1 "%02X"')
+    mac+=$(echo -n ""; dd bs=1 count=5 if=/dev/urandom 2>/dev/null | hexdump -v -e '/1 ":%02X"')
+    # Get solution here to create a valid MAC address:
+    # https://unix.stackexchange.com/questions/279910/how-go-generate-a-valid-and-random-mac-address
+    lastfive=$( echo "$mac" | cut -d: -f 2-6 )
+    firstbyte=$( echo "$mac" | cut -d: -f 1 )
+    firstbyte=$( printf '%02X' $(( 0x$firstbyte & 254 | 2)) )
+    mac="$firstbyte:$lastfive"
   else
-    echo "[*] Dev $net_device no found, update the config file"
+    mac="$static_mac"
   fi
+  setMac
+}
+
+checkMacConf() {
+  ctrl_net_device
+  ctrl_static_mac
+}
+
+updMac() {
+  title "Change MAC"
+  checkMacConf
+  checkBins ip dd hexdump
+  changeMac
 }
 
 #######################################################
 # Update the network address
+# from paranoid.conf, need variable $target_router, $static_ip, $net_device
 
 rand() {
-  local max min range nb
-  max=$($IPCALC $target_router | grep -i hostmax | awk '{print $2}')
-  min=$($IPCALC $target_router | grep -i hostmin | awk '{print $2}')
+  max=$(ipcalc $target_router | grep -i hostmax | awk '{print $2}')
+  min=$(ipcalc $target_router | grep -i hostmin | awk '{print $2}')
   min=${min##*.}
   range="$(( min + 1 ))-${max##*.}"
-  nb=$($SHUF -i $range -n 1)
+  nb=$(shuf -i $range -n 1)
   echo $nb
+  max= min= range= nb=
+}
+
+checkNetworkConf() {
+  isValidAddress $target_router
+  ctrl_net_device
+  checkRoot
+}
+
+setDhcp() {
+  sleep 1
+  dhcpcd $net_device 2> /dev/null
+  log "dhcpd is setup."
+}
+
+staticOrRand() {
+  if [ $static_ip == "random" ] ; then
+    randnb=$(rand)
+    new_ip=${target_router%.*}.$randnb/${network#*/}
+    log "Configure a random ip addr with $randnb -> $new_ip"
+  elif isValidAddress $static_ip ; then
+    new_ip=$static_ip/${network#*/}
+    log "Configure a static ip addr with $static_ip -> $new_ip"
+  else
+    die "Error in change_ip() , network:$network , broad:$broad , static_ip:$static_ip"
+  fi
+}
+
+setIp() {
+  if isValidAddress $new_ip ; then
+    ip address flush dev $net_device
+    sleep 1
+    ip addr add $new_ip broadcast $broad dev $net_device
+    ip route add default via $target_router dev $net_device
+    log "Ip Address has been changed"
+  else
+    die "The address $new_ip is incorrect, target_router:$target_router , new_ip:$new_ip"
+  fi
 }
 
 changeIp() {
-  local randnb network new_ip broad valid
-  network=$($IPCALC $target_router | grep -i network | awk '{print $2}')
-  broad=$($IPCALC $target_router | grep -i broadcast | awk '{print $2}')
-
-  if [[ $static_ip ]] && [[ $static_ip == "random" ]] ; then
-    randnb=$(rand)
-  elif [[ $static_ip ]] ; then
-    new_ip=$static_ip/${network#*/}
-    echo "[*] configure addr with $static_ip"
+  if [ $static_ip == "dhcp" ] ; then
+    checkBins dhcpcd
+    setDhcp
   else
-    echo "[Err] no value found from paranoid.conf"
-    exit 1
-  fi
-
-  [[ -z $new_ip ]] && new_ip=${target_router%.*}.$randnb/${network#*/}
-
-  valid=$($IPCALC $new_ip | grep -i invalid)
-  if [[ -z $valid ]] ; then
-    #echo "Router is $target_router/${network#*/}"
-    echo "[+] Apply your new IP addr: $new_ip"
-    $IP address flush dev $net_device
-    sleep 1
-    $IP addr add $new_ip broadcast $broad dev $net_device
-    $IP route add default via $target_router dev $net_device
-    # restart the firewall
-    #[[ $firewall == "nftables" ]] && . $LIB_DIR/nftables.sh -c $CONF
-    #[[ $firewall == "iptables" ]] && . $LIB_DIR/iptables.sh -c $CONF
-  else
-    echo "[Err] The address $new_ip is incorrect"
-    exit 1
+    checkBins ipcalc shuf ip
+    network="$(ipcalc $target_router | grep -i network | awk '{print $2}')"
+    broad="$(ipcalc $target_router | grep -i broadcast | awk '{print $2}')"
+    staticOrRand
+    setIp
   fi
 }
 
-# If want random ip, start changeIp(), else use dhcpcd
 updIp() {
-  if [[ $want_dhcpcd ]] && [[ $want_dhcpcd == "no" ]] ; then
-    changeIp
-  elif [[ $want_dhcpcd ]] && [[ $want_dhcpcd == "yes" ]] ; then
-    dhcp=$(which dhcpcd)
-    [[ -z $dhcp ]] && die "[Err] dhcpcd is not installed"
-    [[ -z $SYS ]] && die "{Err] systemd is not installed"
-    $SYS restart dhcpcd
-  else 
-    echo "[Err] Config file is bad... dhcpcd=$want_dhcpcd"
-    exit 1
-  fi
+  title "Change ip"
+  checkNetworkConf
+  killDhcp
+  changeIp
 }
 
 #######################################################
@@ -188,7 +205,7 @@ while [ "$#" -gt 0 ] ; do
     -c | --conf ) CONF=${2:-/etc/paranoid-ninja/paranoid.conf} ; shift ; shift ;;
     -h | --hostname ) randHost ; shift ;;
     -i | --ip ) updIp ; shift ;;
-    -m | --mac ) changeMac ; shift ;;
+    -m | --mac ) updMac ; shift ;;
     -t | --timezone ) randTimezone ; shift ;;
     *) die "Unknown arg $1" ;;
   esac

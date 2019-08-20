@@ -1,14 +1,14 @@
 [Unit]
 Description="Randomize MAC, localtime, ip on ethernet %I"
 Documentation="https://github.com/szorfein/paranoid-ninja"
-After=network.target nss-lookup.target paranoid-macspoof@%i.service
+After=network.target nss-lookup.target
 Before=tor.service
-Requires=paranoid-macspoof@%i.service tor.service
+Requires=tor.service
 
 [Service]
-ExecStart=/usr/bin/paranoid-ninja -o -c /etc/paranoid-ninja/paranoid.conf
-ExecReload=/usr/bin/paranoid-ninja -r -c /etc/paranoid-ninja/paranoid.conf
-ExecStop=/usr/bin/paranoid-ninja -S -c /etc/paranoid-ninja/paranoid.conf
+ExecStart=/usr/bin/paranoid-ninja -i -p -H -t -c /etc/paranoid-ninja/paranoid.conf
+ExecReload=/usr/bin/paranoid-ninja -m -i -p -H -t -c /etc/paranoid-ninja/paranoid.conf
+ExecStop=/usr/bin/paranoid-ninja -D -c /etc/paranoid-ninja/paranoid.conf
 RemainAfterExit=yes
 TimeoutSec=35
 IgnoreSIGPIPE=false

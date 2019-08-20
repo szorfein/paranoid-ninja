@@ -1,5 +1,17 @@
 #!/bin/sh
 
+title() {
+  if ! $QUIET ; then
+    printf "${cyan}%s${red}%s${cyan}%s${endc}\n" "---" " $1 " "---"
+  fi
+}
+
+log() { 
+  if ! $QUIET ; then
+    printf "${green}%s${white}%s${endc}\n" "[+]" " $1"
+  fi 
+}
+
 die() {
   printf "${red}%s${white}%s${endc}\n" \
     "[-]" " $1"
@@ -8,7 +20,7 @@ die() {
 
 checkRoot() {
   if [[ "$(id -u)" -ne 0 ]] ; then
-    die "Please run this program as a root" 2>&1
+    die "Please run this program as a root"
   fi
 }
 
@@ -37,6 +49,14 @@ checkConfigFile() {
   else
     die "No config file found"
   fi
+}
+
+checkBins() {
+  for i in $@ ; do
+    if ! which $i > /dev/null 2>&1 ; then
+      die "$i no found"
+    fi
+  done
 }
 
 #######################################################
@@ -272,6 +292,41 @@ testTor() {
   exit 0
 }
 
+isValidAddress() {
+  if ipcalc $1 | grep -i invalid ; then
+    die "target $1 is not a valid address"
+  else
+    return 0
+  fi
+}
+
+ctrl_net_device() {
+  if ! ip a | awk '{print $2}' | grep -qi $net_device:$ ; then
+    die "net_device $net_device no found"
+  fi
+}
+
+killDhcp() {
+  if old=$(pgrep -x dhcpcd) ; then
+    pkill dhcpcd > /dev/null
+    log "Kill a PID $old dhcpcd"
+  fi
+  old=
+}
+
+#######################################################
+# MAC functions
+
+ctrl_static_mac() {
+  if [ $static_mac == 'random' ] ; then
+    :
+  elif echo $static_mac | grep -q "[0-9]*:[0-9]*:[0-9]*:[0-9]*:[0-9]*:[0-9]*" ; then
+    :
+  else
+    die "Value of static_mac $static_mac is incorrect"
+  fi
+}
+
 #######################################################
 # Other Daemon
 
@@ -280,7 +335,7 @@ launchService() {
   echo "check service $1"
   if if_here=$(pgrep -x $1) ; then
     echo "[+] Restarting $1 ..."
-    $SYSTEMCTL restart $1
+    $SYSTEMCTL restart $1 &
     sleep 3
   fi
 }

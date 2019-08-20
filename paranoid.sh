@@ -1,9 +1,13 @@
 #!/bin/sh
 
+set -ue
+
 STOP=false
 TOR=true
 BACKUP=false
-SILENT=true
+QUIET=false
+FIREWALL=false
+RESTART=false
 
 R_HOST=false
 R_IP=false
@@ -11,7 +15,6 @@ R_MAC=false
 R_TIMEZONE=false
 
 # Bins
-NFT=$(which nft)
 IPT_RES=$(which iptables-restore)
 XAUTH=$(which xauth)
 CHOWN=$(which chown)
@@ -89,6 +92,7 @@ EOF
 
 firewall() {
   if [[ $firewall == "nftables" ]] ; then 
+    NFT=$(which nft)
     . $LIB_DIR/nftables.sh -c $CONF 
   elif [[ $firewall == "iptables" ]] ; then
     if ! $TOR ; then
@@ -101,7 +105,7 @@ firewall() {
   else
     die "$firewall Not a valid firewall"
   fi
-  #loadTor
+  RESTART=true
 }
 
 ######################################################
@@ -109,20 +113,21 @@ firewall() {
 
 randomize() {
   if $R_HOST ; then 
-    echo "$0 call randomize.sh --hostname"
+    log "$0 call randomize.sh --hostname"
     . $LIB_DIR/randomize.sh --conf $CONF --hostname
   fi
   if $R_MAC ; then
-    echo "$0 call randomize.sh --mac"
+    log "$0 call randomize.sh --mac"
     . $LIB_DIR/randomize.sh --conf $CONF --mac
   fi
   if $R_TIMEZONE ; then
-    echo "$0 call randomize.sh --timezone"
+    log "$0 call randomize.sh --timezone"
     . $LIB_DIR/randomize.sh --conf $CONF --timezone
   fi
   if $R_IP ; then
-    echo "$0 call randomize.sh --ip"
+    log "$0 call randomize.sh --ip"
     . $LIB_DIR/randomize.sh --conf $CONF --ip
+    #RESTART=true
   fi
 }
 
@@ -144,7 +149,6 @@ useBackup() {
   else
     echo "[-] no firewall $firewall found."
   fi
-  #loadTor
 }
 
 ######################################################
@@ -158,7 +162,6 @@ stopFirewall() {
   else
     die "$firewall is no valid"
   fi
-  #loadTor
 }
 
 ######################################################
@@ -204,7 +207,7 @@ menu() {
   echo "usage: $0 [-s]"
 
   printf "${green}%s${endc}\\n" \
-    "-d, --verbose    Display more informations to debug"
+    "-q, --quiet    Disable messages during the execution"
   echo "usage: $0 [-d]"
 
   exit 0
@@ -236,7 +239,7 @@ while [ "$#" -gt 0 ] ; do
     -s | --status) testTor ; shift ;;
     -D | --disable-transparent-proxy) TOR=false ; shift ;;
     -v | --version) echo "print_version" ; shift ;;
-    -d | --verbose) SILENT=false ; shift ;;
+    -q | --quiet) QUIET=true ; shift ;;
     -h | --help) menu ; shift ;;
     *)
       printf "%s\\n" "$prog_name: Invalid option '$1'"
@@ -255,6 +258,4 @@ if $FIREWALL ; then firewall ; fi
 if $BACKUP ; then useBackup ; fi
 if $STOP ; then stopFirewall ; fi
 
-restartDaemons
-#sshuttle -r yagdra@localhost 0/0 -e "ssh -i /root/.ssh/id_ed25519" &
-#testTor
+if $RESTART ; then restartDaemons ; fi

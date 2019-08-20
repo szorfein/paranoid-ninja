@@ -10,8 +10,6 @@ SYSTEMCTL=$(which systemctl)
 
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
-echo "$0 look variable SILENT : $SILENT"
-
 ####################################################
 # Check Bins
 
@@ -129,14 +127,14 @@ echo "[+] Setting up $firewall rules ..."
 ####################################################
 # Input chain
 
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A INPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A INPUT -m state --state INVALID -j DROP
 $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Anti-spoofing
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A INPUT -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
 fi
 $IPT -A INPUT -i $IF ! -s $INT_NET -j DROP
@@ -148,7 +146,7 @@ $IPT -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 $IPT -A INPUT -i $IF -p udp -s $INT_NET --dport $dns_port -j ACCEPT
 
 # default input log rule
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
@@ -156,7 +154,7 @@ fi
 # Output chain
 
 # Tracking rules
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A OUTPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A OUTPUT -m state --state INVALID -j DROP
@@ -212,7 +210,7 @@ fi
 $IPT -A OUTPUT -p tcp -m tcp --dport 7000 -j ACCEPT
 
 # Default output log rule
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
@@ -220,14 +218,14 @@ fi
 # Forward chain
 
 # Tracking rule
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A FORWARD -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A FORWARD -m state --state INVALID -j DROP
 $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Anti-spoofing rule
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A FORWARD -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
 fi
 $IPT -A FORWARD -i $IF ! -s $INT_NET -j DROP
@@ -235,7 +233,7 @@ $IPT -A FORWARD -i $IF ! -s $INT_NET -j DROP
 # Accept rule
 
 # Default log rule
-if ! $SILENT ; then
+if ! $QUIET ; then
   $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
