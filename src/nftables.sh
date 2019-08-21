@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
+set -ue
 
 # Bins
 NFT=$(which nft)

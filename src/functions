@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
+set -ue
 
 title() {
   if ! $QUIET ; then
@@ -53,7 +55,7 @@ checkConfigFile() {
 
 checkBins() {
   for i in $@ ; do
-    if ! which $i > /dev/null 2>&1 ; then
+    if ! hash $i &>/dev/null ; then
       die "$i no found"
     fi
   done
@@ -155,111 +157,13 @@ clearIptables() {
 #######################################################
 # Hostname
 
-# Write the new hostname in file from $other_host_files
-otherHostFiles() {
-  local f rule
-  rule="$1"
-  if [ $other_host_files ] ; then
-    for f in $other_host_files ; do
-      [[ -f $f ]] &&
-        sed -i "$rule" $f
-    done
-  fi
-}
-
-# forXorg, avoid error like display no found
-# http://ubuntuhandbook.org/index.php/2016/06/change-hostname-ubuntu-16-04-without-restart/
-addXauth() {
-  local user
-  user=$(echo ${xauthority_file%/*} | sed s:/home/::g)
-  $XAUTH_COM add "$1" $2 $3 &&
-  $XAUTH_COM remove "$4" &&
-  chown $user:$user $xauthority_file || die "xauth - fail to change $xauthority_file"
-  unset XAUTH_COM
-}
-
-checkXauth() {
-  local dpy new_dpy proto hexkey new_host ifarg
-  ifarg="${1:-unix}"
-  new_host=$(cat /etc/hostname | head -n 1)
-  dpy=$($XAUTH_COM list | grep $ifarg | awk '{print $1}')
-  proto=$($XAUTH_COM list | grep $ifarg | awk '{print $2}')
-  hexkey=$($XAUTH_COM list | grep $ifarg | awk '{print $3}')
-  if [[ -z $dpy ]] || [[ -z $proto ]] || [[ -z $hexkey ]] ; then
-    die "xauth - unable to find information on $xauthority_file with $ifarg"
-  fi
-  new_dpy="$(echo $dpy | sed s:${dpy%/*}:$new_host:g)"
-  addXauth "$new_dpy" "$proto" "$hexkey" "$dpy"
-}
-
-forXauth() {
-  local if_one old_host XAUTH_COM="$XAUTH -f $xauthority_file"
-  export XAUTH_COM
-  [[ -z $XAUTH ]] && die "xauth - xauth is no found ..."
-  if [[ $xauthority_file ]] && [[ -f $xauthority_file ]] ; then
-    if_one=$($XAUTH_COM list | wc -l)
-    old_host="$1"
-    if [[ $if_one == 1 ]] ; then
-      echo "[+] xauth - changing the single entry..."
-      checkXauth
-    elif [[ $old_host ]] ; then
-      echo "[+] xauth - there is more than one entry, check with $old_host"
-      checkXauth "$old_host"
-    else
-      die "xauth - unable to change the hostname $old_host"
-    fi
+# arg 1:file , 2:oldvalue , 3:newvalue
+applySed() { 
+  if [ -f "$1" ] ; then
+    sed -i "s:$2:$3:g" $1
   else
-    echo "[*] xauth - file $xauthority_file no found, skip..."
+    die "Fail to apply sed rule s:$2:$3:g to $1"
   fi
-}
-
-# exec if ssh_dir is set from conf file.
-updSshKey() {
-  local old new user file if_user_host
-  user="$1"
-  file="$2"
-  old=$(grep $user $file | awk '{print $3}')
-  new=$(cat /etc/hostname | head -n 1)
-  if if_user_host=$(grep $user $file) ; then
-    echo "[+] ssh - changed $user@$new at $file..."
-    sed -i "s:$old:$user@$new:g" $file
-  else
-    echo "[+] ssh - changed $new at $file..."
-    sed -i "s:$3:$new:g" $file
-  fi
-}
-
-forSsh() {
-  local user file pub_key if_pub_key f
-  user=$(echo ${ssh_dir%/*} | sed s:/home/::g)
-  file="$(find $ssh_dir -type f | xargs grep $user | awk '{print $1}')"
-  pub_key="$(grep $user $ssh_dir/authorized_keys | awk '{print $2}')"
-  for f in $file ; do
-    updSshKey $user ${f%%:*}
-  done
-  if [[ $pub_key ]] && if_pub_key=$(grep ${pub_key:0:20} $ssh_dir/known_hosts | awk '{print $1}' | head -n 1) ; then
-    echo "[*] ssh - found a old hostname in $ssh_dir/known_hosts"
-    updSshKey $user $ssh_dir/known_hosts $if_pub_key
-  fi
-}
-
-# Write new value of hostname in multiple files
-writeHost() {
-  local new old file files rule xorg
-  # check if Xorg running
-  xorg="$(pgrep -x Xorg)"
-  # /etc/hostname
-  new="$1"
-  old="$(cat /etc/hostname | head -n 1)"
-  files="/etc/hostname /etc/hosts"
-  rule="s:$old:$new:g"
-  for file in $files ; do
-    sed -i "$rule" $file || die "sed 1"
-  done
-  forSsh
-  [[ ! -z $xorg ]] && forXauth "$old"
-  otherHostFiles "$rule"
-  $HOSTNAME $new
 }
 
 #######################################################

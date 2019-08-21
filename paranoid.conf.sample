@@ -33,31 +33,32 @@ firewall_quiet="yes"
 static_mac="random"
 
 #########################################################
-# Hostname change
+# Hostname options
+
+# prefix or suffix apply to hostname, e.g: blackhole-63htvnuebl
+# if you doesn't need prefix or prefix
+# just clean the variable like prefix_hostname=("") or suffix_hostname=("")
+# The script will choose between a prefix or suffix
+prefix_hostname=( "star-" "comet-" "nebula-" "blackhole-" "android-" )
+suffix_hostname=( "-macbookpro" "-iphone" )
+
+# The user affect by hostname change (will change ssh key and xauth if use Xorg)
+paranoid_user="yagdra"
+paranoid_home="/home/$paranoid_user"
 
 # ssh dir
 # Need change the hostname in this dir when he change
 # keep it void if no need, ex: ssh_dir=""
-ssh_dir="/home/brakk/.ssh"
+ssh_dir="$paranoid_home/.ssh"
 
 # If use Xorg . .Xauthority of current user
 # else change to xauthority_file=""
-xauthority_file="/home/brakk/.Xauthority"
+xauthority_file="$paranoid_home/.Xauthority"
 
 # Other files where the new hostname have to be apply
-# You can apply multiple files
-# ex: other_host_files="/home/blabla.conf /home/other.c"
-other_host_files="/home/brakk/.offlineimaprc"
-
-#########################################################
-# Randomize options
-
-# prefix or suffix apply to hostname, e.g: blackhole-63htvnuebl
-# if you doesn't need prefix or prefix
-# just clean the variable like preix_hostname=() or place a comment
-# The script will choose a prefix or a suffix :)
-prefix_hostname=( "star-" "comet-" "nebula-" "blackhole-" "android-" )
-suffix_hostname=( "-macbookpro" "-iphone" )
+# You can apply multiple files separate by a space
+# ex: other_host_files="$paranoid_home/.offlineimaprc $paranoid_home/blabla.conf"
+other_host_files=""
 
 #########################################################
 # Timezone options

@@ -1,24 +1,12 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# Bins
-HWC=$(which hwclock)
-HOSTNAME=$(which hostname)
-XAUTH=$(which xauth)
-CHOWN=$(which chown)
-SYS=$(which systemctl)
-HEXDUMP=$(which hexdump)
-TR=$(which tr)
-HEAD=$(which head)
+set -ue
 
 LOCALTIME=/etc/localtime
 BACKUP_FILES="/etc/hosts /etc/hostname"
 
 #######################################################
 # Check deps
-
-[[ -z $HWC ]] && die "util-linux is no found, plz install"
-[[ -z $HOSTNAME ]] && die "command hostname is no found"
-[[ -z $SYS ]] && die "systemd is no found, plz install"
 
 checkRoot
 
@@ -57,9 +45,7 @@ splitDate() {
 }
 
 checkTimeAndDate() {
-  if time=$(cat /tmp/time-$PID.html | grep "[0-9]*:[0-9]*:[0-9]*" -o) ; then
-    :
-  else
+  if ! time=$(cat /tmp/time-$PID.html | grep "[0-9]*:[0-9]*:[0-9]*" -o) ; then
     die "Time no found"
   fi
 
@@ -77,20 +63,20 @@ savePage() {
   PID=$$ 
   if [ $(ls /tmp/time-* | wc -l) -gt 5 ] ; then rm /tmp/time-* ; fi
   #curl -s https://time.is/${city:-Paris} -o /tmp/time-$PID.html
-  wget --quiet --https-only --no-cookies \
-    --user-agent="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.3) Gecko/2008092416 Firefox/3.0.3" \
+  wget --quiet --https-only --no-cookies --user-agent="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.3) Gecko/2008092416 Firefox/3.0.3" \
     https://time.is/${city-:Paris} -O /tmp/time-$PID.html || 
     die "Can't download https://time.is/${city}..."
-}
+      [ -f /tmp/time-$PID.html ] || die "Problem with wget, /tmp/time-$PID.html is no found"
+    }
 
-setTheTimezone() {
-  if [ -f $zoneinfo_dir/$country/$city ] ; then
-    timedatectl set-timezone "$country/$city"
-    log "Set timezone $country/$city"
-  else
-    die "Timezone $country/$city is no found"
-  fi
-}
+  setTheTimezone() {
+    if [ -f $zoneinfo_dir/$country/$city ] ; then
+      timedatectl set-timezone "$country/$city"
+      log "Set timezone $country/$city"
+    else
+      die "Timezone $country/$city is no found"
+    fi
+  }
 
 genRandTimezone() {
   t_cut="${timezone_dir[RANDOM % ${#timezone_dir[@]}]}"
@@ -127,7 +113,6 @@ selectATimezone() {
 
 updTimezone() {
   title "Change timezone"
-  checkRoot
   checkBins wget jq timedatectl
   [ -d $zoneinfo_dir ] || die "zoneinfo dir no found at $zoneinfo_dir"
   selectATimezone
@@ -135,35 +120,154 @@ updTimezone() {
 
 #######################################################
 # Randomize the hostname
+# from paranoid.conf, need $prefix_hostname, $suffix_hostname , $paranoid_user
+# $paranoid_home , $other_host_files , $xauthority_file , $ssh_dir
 
-randHost() {
-  local rand_what rand_word rand_keyword new all
-  all=( "prefix" "suffix" )
-  rand_word=$($TR -dc 'a-z0-9' < /dev/urandom | $HEAD -c 10)
-  if [[ $prefix_hostname ]] && [[ -z $suffix_hostname ]] ; then
+# Write the new hostname in file from $other_host_files
+otherHostFiles() {
+  echo -n "[+] Update other files..."
+  if [ -n $other_host_files ] ; then
+    for f in $other_host_files ; do
+      applySed $f $1 $new_host
+    done
+  fi
+  echo " done"
+}
+
+setXauth() {
+  $XAUTH_COM add "$1" $2 $3
+  $XAUTH_COM remove "$4"
+  chown $paranoid_user:$paranoid_user $xauthority_file
+  XAUTH_COM=
+}
+
+checkXauth() {
+  local dpy new_dpy proto hexkey ifarg
+  ifarg="${1:-unix}"
+  dpy=$($XAUTH_COM list | grep $ifarg | awk '{print $1}')
+  proto=$($XAUTH_COM list | grep $ifarg | awk '{print $2}')
+  hexkey=$($XAUTH_COM list | grep $ifarg | awk '{print $3}')
+  if [ -z $dpy ] || [ -z $proto ] || [ -z $hexkey ] ; then
+    # fallback if fail to detect the old hostname
+    dpy=$($XAUTH_COM list | head -n 1 | awk '{print $1}')
+    proto=$($XAUTH_COM list | head -n 1 | awk '{print $2}')
+    hexkey=$($XAUTH_COM list | head -n 1 | awk '{print $3}')
+  fi
+  if new_dpy="$(echo $dpy | sed s:${dpy%/*}:$new_host:g)" ; then
+    setXauth "$new_dpy" "$proto" "$hexkey" "$dpy"
+  else
+    die "xauth fail"
+  fi
+}
+
+updForXorg() {
+  local if_one old_host 
+  checkBins xauth
+  [ -f $xauthority_file ] || die "paranoid.conf : xauthority_file=$xauthority_file no found."
+  XAUTH_COM="xauth -f $xauthority_file"
+  if_one=$($XAUTH_COM list | wc -l)
+  old_host="$1"
+  echo -n "[+] Update Xauth..."
+  if [[ $if_one == 1 ]] ; then
+    #echo "[+] xauth - changing the single entry..."
+    checkXauth
+  elif [[ $old_host ]] ; then
+    #echo "[+] xauth - there is more than one entry, check with $old_host"
+    checkXauth "$old_host"
+  else
+    die "xauth - unable to change the hostname $old_host"
+  fi
+  echo " done."
+}
+
+# exec if ssh_dir is set from conf file.
+updSshKey() {
+  local old
+  old=$(grep $paranoid_user $1 | awk '{print $3}')
+  if grep -q $paranoid_user $1 ; then
+    #echo "[+] ssh - changed $paranoid_user@$new_host at $1..."
+    applySed $1 $old "$paranoid_user@$new_host"
+  else
+    #echo "[+] ssh - changed $new_host at $1..."
+    applySed $1 $2 $new_host
+  fi
+}
+
+forSsh() {
+  local file pub_key if_pub_key
+  file="$(find $ssh_dir -type f | xargs grep $paranoid_user | awk '{print $1}')"
+  pub_key="$(grep $paranoid_user $ssh_dir/authorized_keys | awk '{print $2}')"
+  echo -n "[+] Update ssh keys..."
+  for f in $file ; do
+    updSshKey ${f%%:*}
+  done
+  if [[ $pub_key ]] && if_pub_key=$(grep ${pub_key:0:20} $ssh_dir/known_hosts | awk '{print $1}' | head -n 1) ; then
+    #echo "[*] ssh - found a old hostname in $ssh_dir/known_hosts"
+    updSshKey $ssh_dir/known_hosts $if_pub_key
+  fi
+  echo " done."
+}
+
+# Write new value of hostname in multiple files
+writeHost() {
+  old="$(cat /etc/hostname | head -n 1)"
+  for f in /etc/hostname /etc/hosts ; do
+    applySed $f $old $new_host
+  done
+  if [ -d $ssh_dir ] ; then forSsh ; else
+    log "paranoid.conf : ssh_dir=$ssh_dir is no found..." 
+  fi
+  if pgrep -x Xorg >/dev/null ; then updForXorg "$old" ; fi
+  otherHostFiles $old
+  hostnamectl set-hostname $new_host
+  old=
+}
+
+rand_prefix_suffix() {
+  if [ -z $prefix_hostname ] && [ -z $suffix_hostname ] ; then
+    rand_what="none"
+  elif [ -n $prefix_hostname ] && [ -z $suffix_hostname ] ; then
     rand_what="prefix"
-  elif [[ -z $prefix_hostname ]] && [[ $suffix_hostname ]] ; then
+  elif [ -z $prefix_hostname ] && [ -n $suffix_hostname ] ; then
     rand_what="suffix"
   else
+    all=( "prefix" "suffix" )
     rand_what="${all[RANDOM % ${#all[@]}]}"
+    all=
   fi
-  if [[ $prefix_hostname ]] || [[ $suffix_hostname ]] ; then
-    if [[ $rand_what == "prefix" ]] && [[ ! -z $prefix_hostname ]] ; then
+}
+
+randHost() {
+  rand_word=$(tr -dc 'a-z0-9' < /dev/urandom | head -c 10)
+  rand_prefix_suffix
+  case $rand_what in
+    none) : "$rand_word" ;;
+    prefix)
       rand_keyword="${prefix_hostname[RANDOM % ${#prefix_hostname[@]}]}"
-      new="$rand_keyword$rand_word"
-      #echo "[+] hostname - apply prefix ... $new"
-    else
+      : "$rand_keyword$rand_word"
+      ;;
+    suffix)
       rand_keyword="${suffix_hostname[RANDOM % ${#suffix_hostname[@]}]}"
-      new="$rand_word$rand_keyword"
-      #echo "[+] hostname - apply suffix ... $new"
-    fi
-  else
-    new="$rand_word"
-    #echo "[+] hostname - no suffix or prefix so $new"
-  fi
-  echo "[+] Apply a new hostname $new"
-  writeHost $new
-  $HOSTNAME $new || die "hostname fail"
+      : "$rand_word$rand_keyword"
+      ;;
+    *) die "Unknown value rand_word=$rand_what" ;; 
+  esac
+  new_host="$_"
+  log "Apply a new hostname $new_host..."
+  writeHost 
+  rand_what= rand_word= rand_keyword=
+}
+
+checkHostnameConf() {
+  [ -d /home/$paranoid_user ] ||
+    die "paranoid.conf : paranoid_user=$paranoid_user, /home/$paranoid_user is no found"
+}
+
+updHost() {
+  title "Change hostname"
+  checkBins ssh hexdump hostnamectl
+  checkHostnameConf
+  randHost
 }
 
 #######################################################
@@ -194,9 +298,9 @@ changeMac() {
     mac="$firstbyte:$lastfive"
   else
     mac="$static_mac"
-  fi
-  setMac
-}
+    fi
+    setMac
+  }
 
 checkMacConf() {
   ctrl_net_device
@@ -227,7 +331,6 @@ rand() {
 checkNetworkConf() {
   isValidAddress $target_router
   ctrl_net_device
-  checkRoot
 }
 
 setDhcp() {
@@ -295,13 +398,13 @@ if [ $other_host_files ] ; then
     [[ -f $f ]] && BACKUP_FILES+=" $f"
   done
 fi
- 
+
 backupFiles "$BACKUP_FILES"
 
 while [ "$#" -gt 0 ] ; do
   case "$1" in
     -c | --conf ) CONF=${2:-/etc/paranoid-ninja/paranoid.conf} ; shift ; shift ;;
-    -h | --hostname ) randHost ; shift ;;
+    -h | --hostname ) updHost ; shift ;;
     -i | --ip ) updIp ; shift ;;
     -m | --mac ) updMac ; shift ;;
     -t | --timezone ) updTimezone ; shift ;;

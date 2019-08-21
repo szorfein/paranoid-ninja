@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -ue
 
@@ -255,6 +255,9 @@ done
 if [ ! -f $CONF ] ; then
   die "config file no found"
 fi
+
+bye() { printf "\n${green}%s${endc}\n" "$0 has finish, bye." ; }
+trap bye EXIT
 
 randomize
 if $FIREWALL ; then firewall ; fi
