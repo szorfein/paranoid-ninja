@@ -2,11 +2,7 @@
 
 set -ue
 
-LOCALTIME=/etc/localtime
 BACKUP_FILES="/etc/hosts /etc/hostname"
-
-#######################################################
-# Check deps
 
 checkRoot
 
@@ -62,7 +58,6 @@ checkTimeAndDate() {
 savePage() {
   PID=$$ 
   if [ $(ls /tmp/time-* | wc -l) -gt 5 ] ; then rm /tmp/time-* ; fi
-  #curl -s https://time.is/${city:-Paris} -o /tmp/time-$PID.html
   wget --quiet --https-only --no-cookies --user-agent="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.3) Gecko/2008092416 Firefox/3.0.3" \
     https://time.is/${city-:Paris} -O /tmp/time-$PID.html || 
     die "Can't download https://time.is/${city}..."
@@ -152,13 +147,13 @@ checkXauth() {
     dpy=$($XAUTH_COM list | head -n 1 | awk '{print $1}')
     proto=$($XAUTH_COM list | head -n 1 | awk '{print $2}')
     hexkey=$($XAUTH_COM list | head -n 1 | awk '{print $3}')
-  fi
-  if new_dpy="$(echo $dpy | sed s:${dpy%/*}:$new_host:g)" ; then
-    setXauth "$new_dpy" "$proto" "$hexkey" "$dpy"
-  else
-    die "xauth fail"
-  fi
-}
+    fi
+    if new_dpy="$(echo $dpy | sed s:${dpy%/*}:$new_host:g)" ; then
+      setXauth "$new_dpy" "$proto" "$hexkey" "$dpy"
+    else
+      die "xauth fail"
+    fi
+  }
 
 updForXorg() {
   local if_one old_host 
@@ -261,7 +256,7 @@ randHost() {
 checkHostnameConf() {
   [ -d /home/$paranoid_user ] ||
     die "paranoid.conf : paranoid_user=$paranoid_user, /home/$paranoid_user is no found"
-}
+  }
 
 updHost() {
   title "Change hostname"

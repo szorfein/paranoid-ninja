@@ -30,7 +30,7 @@ And add `iptables` or `nftables`. `wpa_supplicant` if use wifi.
 
 #### Other distribs
 The name of the packages may be different but need:  
-`iproute2`, `shuf`, `urandom`, `util-linux`, `nftables` or `iptables`, `systemd`, `ipcalc`, `wpa_supplicant` if use a wifi card.  
+`iproute2`, `shuf`, `urandom`, `util-linux`, `nftables` or `iptables`, `systemd`, `ipcalc`, `jq`, `wpa_supplicant` if use a wifi card, `dhcpcd` is comptatible too.  
 
 ## Install
 Clone this repository:
@@ -52,11 +52,11 @@ There are a temporary working example of `sshuttle.service` in the [systemd dir]
 A complete howto can be found [here](https://github.com/szorfein/Gentoo-ZFS/wiki/12.privacy).  
 
 ## Systemd service
-The script install 2 services, for ethernet card:
+The Makefile install 2 services, one for ethernet card:
 
     # systemctl start paranoid@<interface>
 
-And wifi card:
+And one for the wifi card:
 
     # systemctl start paranoid-wifi@<interface>
 
@@ -66,6 +66,10 @@ And wifi card:
 
 ### Examples
 
+**Update your timezone by looking your ip address**:  (need a working connection)
+
+    # paranoid-ninja -t -c /etc/paranoid-ninja/paranoid.conf
+
 **Randomize all**:
 
     # paranoid-ninja -m -i -p -H -t -c /etc/paranoid-ninja/paranoid.conf
@@ -73,9 +77,3 @@ And wifi card:
 Will randomize the MAC address (`-m`), the ip address (`-i`), apply a transparent proxy (`-p`), change the hostname (`-H`), and change the time zone (`-t`).  
 
 All command need `-c /etc/paranoid-ninja/paranoid.conf` except with `-s|--status`.  
-
-**Update your timezone by looking your ip address**:  (need a working connection)
-
-    # paranoid-ninja -t -c /etc/paranoid-ninja/paranoid.conf
-
-

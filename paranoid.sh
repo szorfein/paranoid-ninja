@@ -16,10 +16,6 @@ R_TIMEZONE=false
 
 # Bins
 IPT_RES=$(which iptables-restore)
-XAUTH=$(which xauth)
-CHOWN=$(which chown)
-HOSTNAME=$(which hostname)
-SYSTEMCTL=$(which systemctl)
 
 DIR="$(pwd)"
 readonly prog_name="$0"
