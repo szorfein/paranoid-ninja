@@ -61,17 +61,17 @@ savePage() {
   wget --quiet --https-only --no-cookies --user-agent="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.3) Gecko/2008092416 Firefox/3.0.3" \
     https://time.is/${city-:Paris} -O /tmp/time-$PID.html || 
     die "Can't download https://time.is/${city}..."
-      [ -f /tmp/time-$PID.html ] || die "Problem with wget, /tmp/time-$PID.html is no found"
-    }
+  [ -f /tmp/time-$PID.html ] || die "Problem with wget, /tmp/time-$PID.html is no found"
+}
 
-  setTheTimezone() {
-    if [ -f $zoneinfo_dir/$country/$city ] ; then
-      timedatectl set-timezone "$country/$city"
-      log "Set timezone $country/$city"
-    else
-      die "Timezone $country/$city is no found"
-    fi
-  }
+setTheTimezone() {
+  if [ -f $zoneinfo_dir/$country/$city ] ; then
+    timedatectl set-timezone "$country/$city"
+    log "Set timezone $country/$city"
+  else
+    die "Timezone $country/$city is no found"
+  fi
+}
 
 genRandTimezone() {
   t_cut="${timezone_dir[RANDOM % ${#timezone_dir[@]}]}"
@@ -136,9 +136,7 @@ setXauth() {
   XAUTH_COM=
 }
 
-checkXauth() {
-  local dpy new_dpy proto hexkey ifarg
-  ifarg="${1:-unix}"
+splitXauth() {
   dpy=$($XAUTH_COM list | grep $ifarg | awk '{print $1}')
   proto=$($XAUTH_COM list | grep $ifarg | awk '{print $2}')
   hexkey=$($XAUTH_COM list | grep $ifarg | awk '{print $3}')
@@ -147,13 +145,20 @@ checkXauth() {
     dpy=$($XAUTH_COM list | head -n 1 | awk '{print $1}')
     proto=$($XAUTH_COM list | head -n 1 | awk '{print $2}')
     hexkey=$($XAUTH_COM list | head -n 1 | awk '{print $3}')
-    fi
-    if new_dpy="$(echo $dpy | sed s:${dpy%/*}:$new_host:g)" ; then
-      setXauth "$new_dpy" "$proto" "$hexkey" "$dpy"
-    else
-      die "xauth fail"
-    fi
-  }
+  fi
+}
+
+checkXauth() {
+  local new_dpy
+  ifarg="${1:-unix}"
+  splitXauth
+  if new_dpy="$(echo $dpy | sed s:${dpy%/*}:$new_host:g)" ; then
+    setXauth "$new_dpy" "$proto" "$hexkey" "$dpy"
+  else
+    die "xauth fail"
+  fi
+  ifarg= dpy= proto= hexkey=
+}
 
 updForXorg() {
   local if_one old_host 
@@ -293,9 +298,9 @@ changeMac() {
     mac="$firstbyte:$lastfive"
   else
     mac="$static_mac"
-    fi
-    setMac
-  }
+  fi
+  setMac
+}
 
 checkMacConf() {
   ctrl_net_device

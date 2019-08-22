@@ -166,48 +166,27 @@ stopFirewall() {
 ######################################################
 # Show menu
 
+doption() {
+  printf "${green}%s\\t${white}%s${endc}\\n" "$1" "$2"
+}
+
 menu() {
   banner
 
   printf "${green}%s${endc}\\n" \
-    "-b, --restore-backup    Restore your files"
-  echo "usage: $0 [-b] [-c paranoid.conf]"
+    "Usage: $0 [ OPTIONS ] [ -c PATH_CONFIG_FILE ]"
 
-  printf "${green}%s${endc}\\n" \
-    "-p, --transparent-tor    Transparent-torrify on nftables or iptables"
-  echo "usage: $0 [-p] [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-H, --hostname    Make a random hostname"
-  echo "usage: $0 [-h] [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-i, --ip    Make a random private ip based on your target router, work like dhcpcd but random :)"
-  echo "usage: $0 [-i] [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-m, --mac    Make a random mac address"
-  echo "usage: $0 [-m] [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-t, --timezone    Choose a random timezone, look at /usr/share/zoneinfo"
-  echo "usage: $0 [-t] [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-D, --disable-transparent-proxy    Just remove the transparent-proxy throught tor"
-  echo "usage: $0 [-t] [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-c, --config    Apply your config file, required for all commands"
-  echo "usage: $0 [-c paranoid.conf]"
-
-  printf "${green}%s${endc}\\n" \
-    "-s, --status    Check if tor running and look infos on your ip"
-  echo "usage: $0 [-s]"
-
-  printf "${green}%s${endc}\\n" \
-    "-d, --verbose    Display more informations to debug"
-  echo "usage: $0 [-d]"
+  echo -e "\nOPTIONS are: "
+  doption "-b, --restore-backup" "Restore your files"
+  doption "-p, --transparent-tor" "Apply a transparent-torrify on nftables or iptables"
+  doption "-H, --hostname" "Make a random hostname, can use a custom prefix or suffix"
+  doption "-i, --ip" "Can build your ip with dhcpcd, forge a random or a static"
+  doption "-m, --mac" "Can build a fully random or static mac address"
+  doption "-t, --timezone" "Can build a random timezone or check one based on your ip"
+  doption "-D, --disable-transparent-proxy" "Just remove the transparent-proxy throught tor"
+  doption "-s, --status" "Check if tor running and look infos on your ip"
+  doption "-q, --quiet" "Delete messages when running and hide firewall logs too"
+  doption "-h, --help" "Display this"
 
   exit 0
 }
