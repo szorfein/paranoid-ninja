@@ -3,19 +3,14 @@
 # fail on void variable and error
 set -ue
 
-IPT=$(which iptables)
-MODPROBE=$(which modprobe)
-IP=$(which ip)
-SYSTEMCTL=$(which systemctl)
-
+IPT=iptables
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
 ####################################################
 # Check Bins
 
-[[ -z $IPT ]] && die "iptables no found"
-[[ -z $MODPROBE ]] && die "modprobe no found"
-[[ -z $SYSTEMCTL ]] && die "systemctl no found"
+checkBins modprobe iptables ip systemctl
+checkRoot
 
 ####################################################
 # Command line parser
@@ -27,13 +22,12 @@ while [ "$#" -gt 0 ] ; do
     *) die "$0 unknown arg $1"
   esac
 done
-checkRoot
 
 ####################################################
 # Check network device and ip
 
 IF=$net_device
-INT_NET=$($IP a show $IF | grep inet | awk '{print $2}' | head -n 1)
+INT_NET=$(ip a show $IF | grep inet | awk '{print $2}' | head -n 1)
 
 [[ -z $IF ]] && die "Device network UP no found"
 [[ -z $INT_NET ]] && die "Ip addr no found"
@@ -109,7 +103,7 @@ EOF
 # load modules
 
 # Look which system need
-$MODPROBE ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
+modprobe ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 
 # Disable ipv6
 # No need enable on archlinux

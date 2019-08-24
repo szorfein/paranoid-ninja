@@ -247,7 +247,7 @@ launchService() {
   echo "check service $1"
   if if_here=$(pgrep -x $1) ; then
     echo "[+] Restarting $1 ..."
-    $SYSTEMCTL restart $1 &
+    systemctl restart $1 &
     sleep 3
   fi
 }

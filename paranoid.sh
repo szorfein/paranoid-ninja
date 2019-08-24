@@ -227,9 +227,7 @@ while [ "$#" -gt 0 ] ; do
   esac
 done
 
-if [ ! -f $CONF ] ; then
-  die "config file no found"
-fi
+[ -f $CONF ] || die "config file no found"
 
 bye() { printf "\n${green}%s${endc}\n" "$0 has finish, bye." ; }
 trap bye EXIT
@@ -238,8 +236,4 @@ randomize
 if $FIREWALL ; then firewall ; fi
 if $BACKUP ; then useBackup ; fi
 if $STOP ; then stopFirewall ; fi
-
 if $RESTART ; then restartDaemons ; fi
-
-#sshuttle -r yagdra@localhost 0/0 -e "ssh -i /root/.ssh/id_ed25519" &
-#testTor

@@ -2,24 +2,19 @@
 
 set -ue
 
-# Bins
-NFT=$(which nft)
-IP=$(which ip)
-SYSTEMCTL=$(which systemctl)
-
+NFT=nft
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
 
 ######################################################
 # Check Bins
 
-[[ -z $NFT ]] && die "nftables no found, plz install"
-[[ -z $IP ]] && die "iproute2 no found, plz install"
+checkBins ip systemctl nft
+checkRoot
 
 ######################################################
 # Command line parser
 
 checkArgConfig $1 $2
-checkRoot
 
 ######################################################
 # Check Network dev and ip
@@ -27,7 +22,7 @@ checkRoot
 #IF=$(ip a | grep -i "state up" | head -n 1 | awk '{print $2}' | sed -e 's/://g')
 IF=$net_device
 # If fail, put your ip here, e.g: 192.168.1.2/24
-INT_NET=$($IP a show $IF | grep inet | awk '{print $2}' | head -n 1)
+INT_NET=$(ip a show $IF | grep inet | awk '{print $2}' | head -n 1)
 
 [[ -z $IF ]] && die "Device network UP no found."
 [[ -z $INT_NET ]] && die "Ip addr no found."
@@ -54,7 +49,7 @@ docker_v4=$docker_ipv4
 
 readonly torrc="/etc/tor/torrc"
 
-[[ ! -f $torrc ]] && die "$torrc no found, TOR isn't install ?"
+[ -f $torrc ] || die "$torrc no found, TOR isn't install ?"
 
 # Tor transport
 grep TransPort $torrc > /dev/null 2>&1
