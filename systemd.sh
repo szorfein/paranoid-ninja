@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -ue
+
 PN=$(grep -ie "^program_name" Makefile | awk 'BEGIN {FS="="}{print $2}')
 BIN_DIR="$(grep -ie "^bin_dir" Makefile | awk 'BEGIN {FS="="}{print $2}')"
 SYSTEMD_SERVICE=$(grep -ie "^systemd_service" Makefile | awk 'BEGIN {FS="="}{print $2}')
@@ -15,37 +17,25 @@ DIR=$(pwd)
 FUNCS=$DIR/src/functions
 source $FUNCS
 
-DEP_NO_OK=false
-
 DEPS="which systemctl hwclock hostname chown"
 DEPS+=" ip ipcalc shuf tor dhcpcd tr hexdump dd modprobe"
-DEPS+=" head"
+DEPS+=" head jq"
 DEPS_FILE="/dev/urandom"
 
-checkArgConfig $1 $2
 CONF=$2
 
 for d in $DEPS ; do
-  which $d >/dev/null 2>&1
-  if [ $? -ne 0 ] ; then
-    DEP_NO_OK=true
-    echo "[ Failed ] command $d no found, install it plz"
-  fi
+  checkBins $d
+  echo "[OK] Found $d"
 done
-
-[[ $DEP_NO_OK == true ]] && die "Dependencies are not complete"
 
 for f in $DEPS_FILE ; do
-  file=$(file $f | grep "cannot open")
-  if [[ -z $file ]] ; then
-    echo "[OK] found $f"
+  if [ -f $f ] || [ -c $f ] ; then
+    echo "[OK] Found $f"
   else
-    DEP_NO_OK=true
-    echo "[ Failed ] $f is no found"
+    die "[ Failed ] $f is no found"
   fi
 done
-
-[[ $DEP_NO_OK == true ]] && die "dependencies are not complete"
 
 DESTDIR=/
 cat > $PN.confd << EOF
