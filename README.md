@@ -65,7 +65,6 @@ And one for the wifi card:
     # paranoid-ninja -h
 
 ### Examples
-
 **Update your timezone by looking your ip address**:  (need a working connection)
 
     # paranoid-ninja -t -c /etc/paranoid-ninja/paranoid.conf

@@ -3,7 +3,6 @@
 set -ue
 
 STOP=false
-TOR=true
 BACKUP=false
 QUIET=false
 FIREWALL=false
@@ -91,13 +90,10 @@ firewall() {
     NFT=$(which nft)
     . $LIB_DIR/nftables.sh -c $CONF 
   elif [[ $firewall == "iptables" ]] ; then
-    if ! $TOR ; then
-      echo "paranoid-ninja, i disable tor : $TOR"
-      . $LIB_DIR/iptables.sh -c $CONF --disable
-    else
-      echo "paranoid-ninja, i enable tor : $TOR"
-      . $LIB_DIR/iptables.sh -c $CONF
+    if ! $tor_proxy ; then
+      echo "paranoid-ninja, tor is enable: $tor_proxy"
     fi
+    . $LIB_DIR/iptables.sh -c $CONF
   else
     die "$firewall Not a valid firewall"
   fi
@@ -215,7 +211,7 @@ while [ "$#" -gt 0 ] ; do
     -p | --transparent-proxy) FIREWALL=true ; shift ;;
     -t | --timezone ) R_TIMEZONE=true ; shift ;;
     -s | --status) testTor ; shift ;;
-    -D | --disable-transparent-proxy) TOR=false ; shift ;;
+    -D | --disable-transparent-proxy) tor_proxy=false ; shift ;;
     -v | --version) echo "print_version" ; shift ;;
     -q | --quiet) QUIET=true ; shift ;;
     -h | --help) menu ; shift ;;

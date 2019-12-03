@@ -336,6 +336,7 @@ checkNetworkConf() {
 setDhcp() {
   sleep 1
   dhcpcd $net_device 2> /dev/null
+  sleep 2
   log "dhcpd is setup."
 }
 

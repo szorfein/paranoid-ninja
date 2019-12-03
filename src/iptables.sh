@@ -17,7 +17,6 @@ checkRoot
 
 while [ "$#" -gt 0 ] ; do
   case "$1" in
-    -D | --disable) TOR=false ; shift ;;
     -c | --conf) CONF=$2 ; shift ; shift ;;
     *) die "$0 unknown arg $1"
   esac
@@ -43,11 +42,6 @@ tor_uid=$(searchTorUid)
 # backupFiles
 
 backupFiles "$BACKUP_FILES"
-
-####################################################
-# if docker
-
-docker_v4=$docker_ipv4
 
 ####################################################
 # TOR vars
@@ -84,7 +78,7 @@ fi
 readonly virt_tor=$(grep VirtualAddrNetworkIPv4 $torrc | awk '{print $2}')
 
 # non Tor addr
-readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_v4 192.168.0.0/16"
+readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_ipv4 192.168.0.0/16"
 
 # Just to be sure :)
 [[ -z $trans_port ]] && die "No TransPort value found on $torrc"
@@ -95,9 +89,15 @@ readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_v4 192.168.0.0/16
 # resolv.conf
 
 echo "[+] Update /etc/resolv.conf"
+if $tor_proxy ; then
 cat > /etc/resolv.conf << EOF
 nameserver 127.0.0.1
 EOF
+else
+cat > /etc/resolv.conf << EOF
+nameserver 1.1.1.1
+EOF
+fi
 
 ####################################################
 # load modules
@@ -158,14 +158,22 @@ $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 $IPT -A OUTPUT -o lo -j ACCEPT
 $IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
 
+# tor
+if $tor_proxy ; then
+  $IPT -A OUTPUT -p tcp --dport 8890 --syn -m state --state NEW -j ACCEPT
+  $IPT -A INPUT -p tcp --sport 8890 --syn -m state --state NEW -j ACCEPT
+fi
+
 # Allow Tor process output
 $IPT -A OUTPUT -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
 
 # Allow loopback output
 $IPT -A OUTPUT -o lo -d 127.0.0.1/32 -j ACCEPT
 
-# Tor transproxy magic
-$IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
+if $tor_proxy ; then
+  # Tor transproxy magic
+  $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
+fi
 
 #$IPT -A OUTPUT -m owner --uid-owner $tor_uid -j ACCEPT
 $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
@@ -173,9 +181,14 @@ $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
 
-$IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $trans_port -j ACCEPT
-$IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $dns_port -j ACCEPT
-$IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --sport $dns_port --dport $trans_port -j ACCEPT
+if $tor_proxy ; then
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $trans_port -j ACCEPT
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $dns_port -j ACCEPT
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --sport $dns_port --dport $trans_port -j ACCEPT
+else
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport 53 -j ACCEPT
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p tcp -m tcp --dport 443 -j ACCEPT
+fi
 
 # sshuttle
 for i in $(seq 12298 12300) ; do
@@ -183,21 +196,31 @@ for i in $(seq 12298 12300) ; do
   $IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
 
   if [ $docker_use == "yes" ] ; then
-    $IPT -A INPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
-
-    $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport $i -j ACCEPT
-    $IPT -A OUTPUT -s $docker_ipv4 -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+    for _docker_ipv4 in $docker_ipv4 ; do
+      $IPT -A INPUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A OUTPUT -s "$_docker_ipv4" -d 8.8.8.8 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
+      $IPT -A OUTPUT -s "$_docker_ipv4" -d 8.8.4.4 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
+      $IPT -A OUTPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
+      $IPT -A INPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
+      $IPT -A INPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 3000 -j ACCEPT # docker with nodejs
+      $IPT -A OUTPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 8080 -j ACCEPT # docker web
+      $IPT -A OUTPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 80 -j ACCEPT # docker web
+      $IPT -A OUTPUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A OUTPUT -s "$_docker_ipv4" -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+    done
   fi
 done
 
 # if Docker
 if [ $docker_use == "yes" ] ; then
 
-  # allow local server 80
-  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
+  for _docker_ipv4 in $docker_ipv4 ; do
+    # allow local server 80
+    $IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
 
-  # allow local database on 5432
-  $IPT -A OUTPUT -s $docker_ipv4 -d $docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
+    # allow local database on 5432
+    $IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
+  done
 fi
 
 # freenode 7000
@@ -234,7 +257,7 @@ fi
 ####################################################
 # NAT chain
 
-if $TOR ; then
+if $tor_proxy ; then
   echo "Active transparent proxy throught tor"
   echo "Nat rules tor_uid: $tor_uid, dns: $dns_port, trans: $trans_port, virt: $virt_tor"
   $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN

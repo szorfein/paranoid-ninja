@@ -7,8 +7,8 @@ After=network.target nss-lookup.target
 Before=tor.service
 
 [Service]
-ExecStart=/usr/bin/paranoid-ninja -i -p -H -t -c /etc/paranoid-ninja/paranoid.conf
-ExecReload=/usr/bin/paranoid-ninja -m -i -p -H -t -c /etc/paranoid-ninja/paranoid.conf
+ExecStart=/usr/bin/paranoid-ninja -i -p -H -c /etc/paranoid-ninja/paranoid.conf
+ExecReload=/usr/bin/paranoid-ninja -m -i -p -H -c /etc/paranoid-ninja/paranoid.conf
 ExecStop=/usr/bin/paranoid-ninja -D -c /etc/paranoid-ninja/paranoid.conf
 RemainAfterExit=yes
 TimeoutSec=35
