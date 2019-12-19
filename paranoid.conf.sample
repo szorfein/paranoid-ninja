@@ -32,6 +32,9 @@ firewall_quiet="yes"
 # You can choose "random" or set a static address like "11:11:11:11:11:11"
 static_mac="random"
 
+# Enable or disable (true/false) the transparent proxy throught tor
+tor_proxy=true
+
 #########################################################
 # Hostname options
 

@@ -180,6 +180,59 @@ if [ $secure_rules == "yes" ] ; then
   secure_rules
 fi
 
+tor_proxy() {
+  # bad flag chain
+  $IPT -N TOR_PROXY
+  # pass traffic with bad flags to the bad flag chain
+  $IPT -A OUTPUT -j TOR_PROXY
+
+  echo "Active transparent proxy throught tor"
+  echo "Nat rules tor_uid: $tor_uid, dns: $dns_port, trans: $trans_port, virt: $virt_tor"
+
+  $IPT -t nat -A PREROUTING ! -i lo -p udp -m udp --dport 53 -j REDIRECT --to-ports $dns_port
+  $IPT -t nat -A PREROUTING ! -i lo -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
+
+  $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
+
+  $IPT -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $dns_port
+  $IPT -t nat -A OUTPUT -p tcp --dport 53 -j REDIRECT --to-ports $dns_port
+  $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIRECT --to-ports $dns_port
+
+  $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
+
+  # Do not torrify torrent - not sure this is required
+  $IPT -t nat -A OUTPUT -p udp -m multiport --dports 6881,6882,6883,6884,6885,6886 -j RETURN
+
+  # Don't nat the tor process on local network
+  $IPT -t nat -A OUTPUT -o lo -j RETURN
+
+  # Allow lan access for non_tor 
+  for lan in $non_tor 127.0.0.0/9 127.128.0.0/10; do
+    $IPT -t nat -A OUTPUT -d $lan -j RETURN
+  done
+
+  for iana in $resv_iana ; do
+    $IPT -t nat -A OUTPUT -d $iana -j RETURN
+  done
+
+  # Redirect all other output to TOR
+  $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
+  $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
+
+  #$IPT -A OUTPUT -p tcp --dport 8890 --syn -m state --state NEW -j ACCEPT
+  #$IPT -A INPUT -p tcp --sport 8890 --syn -m state --state NEW -j ACCEPT
+
+  $IPT -A TOR_PROXY -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
+
+  # tor transparent magic
+  $IPT -A TOR_PROXY -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
+}
+
+# start tor proxy if enable
+$tor_proxy && tor_proxy
+
 ####################################################
 # Input chain
 
@@ -187,18 +240,28 @@ if ! $QUIET ; then
   $IPT -A INPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A INPUT -m state --state INVALID -j DROP
+
 $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Accept rule
 $IPT -A INPUT -i lo -j ACCEPT
-$IPT -A INPUT -i $IF -p tcp -s $INT_NET --dport 22 --syn -m state --state NEW -j ACCEPT
+
+# prevent SYN flooding
+$IPT -A INPUT -i $IF -p tcp --syn -m limit --limit 5/second -j ACCEPT
 $IPT -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
-$IPT -A INPUT -i $IF -p udp -s $INT_NET --dport $dns_port -j ACCEPT
+
+# ssh
+$IPT -A INPUT -i $IF -p tcp -s $INT_NET --dport 22 --syn -m state --state NEW -j ACCEPT
+
+if ! $tor_proxy ; then
+  $IPT -A INPUT -i $IF -p udp -s $INT_NET --dport $dns_port -j ACCEPT
+fi
 
 # default input log rule
 if ! $QUIET ; then
   $IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
+$IPT -A INPUT -j DROP
 
 ####################################################
 # Output chain
@@ -214,37 +277,18 @@ $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 $IPT -A OUTPUT -o lo -j ACCEPT
 $IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
 
-# tor
-if $tor_proxy ; then
-  $IPT -A OUTPUT -p tcp --dport 8890 --syn -m state --state NEW -j ACCEPT
-  $IPT -A INPUT -p tcp --sport 8890 --syn -m state --state NEW -j ACCEPT
-fi
-
-# Allow Tor process output
-$IPT -A OUTPUT -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
-
 # Allow loopback output
 $IPT -A OUTPUT -o lo -d 127.0.0.1/32 -j ACCEPT
 
-if $tor_proxy ; then
-  # Tor transproxy magic
-  $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
+if ! $tor_proxy ; then
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport 53 -j ACCEPT
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p tcp -m tcp --dport 443 -j ACCEPT
 fi
 
-#$IPT -A OUTPUT -m owner --uid-owner $tor_uid -j ACCEPT
 $IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
-
-if $tor_proxy ; then
-  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $trans_port -j ACCEPT
-  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport $dns_port -j ACCEPT
-  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --sport $dns_port --dport $trans_port -j ACCEPT
-else
-  $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport 53 -j ACCEPT
-  $IPT -A OUTPUT -o $IF -s $INT_NET -p tcp -m tcp --dport 443 -j ACCEPT
-fi
 
 # sshuttle
 for i in $(seq 12298 12300) ; do
@@ -300,45 +344,9 @@ fi
 $IPT -A FORWARD -m state --state INVALID -j DROP
 $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# Accept rule
-
 # Default log rule
 if ! $QUIET ; then
   $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
-fi
-
-####################################################
-# NAT chain
-
-if $tor_proxy ; then
-  echo "Active transparent proxy throught tor"
-  echo "Nat rules tor_uid: $tor_uid, dns: $dns_port, trans: $trans_port, virt: $virt_tor"
-  $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
-  $IPT -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $dns_port
-  $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -p udp --dport 53 -j REDIRECT --to-ports $dns_port
-
-  $IPT -t nat -A OUTPUT -p tcp -d $virt_tor -j REDIRECT --to-ports $trans_port
-  $IPT -t nat -A OUTPUT -p udp -d $virt_tor -j REDIRECT --to-ports $trans_port
-
-  # Do not torrify torrent - not sure this is required
-  $IPT -t nat -A OUTPUT -p udp -m multiport --dports 6881,6882,6883,6884,6885,6886 -j RETURN
-
-  # Don't nat the tor process on local network
-  $IPT -t nat -A OUTPUT -o lo -j RETURN
-
-  # Allow lan access for non_tor 
-  for lan in $non_tor 127.0.0.0/9 127.128.0.0/10; do
-    $IPT -t nat -A OUTPUT -d "$lan" -j RETURN
-  done
-
-  #for _iana in $_resv_iana ; do
-  #  $IPT -t nat -A OUTPUT -d "$_iana" -j RETURN
-  #done
-
-  # Redirect all other output to TOR
-  $IPT -t nat -A OUTPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
-  $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
-  $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 fi
 
 echo "Setting iptable ended"
