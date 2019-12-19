@@ -80,3 +80,9 @@ docker_ipv4="172.17.0.0/16"
 
 sshuttle_use="no"
 sshuttle_service_name="sshuttle.service"
+
+#########################################################
+# Iptables only
+
+# Active secure_rule, can block Nmap:Xmap, Merry Xmas, SF, SR, SFP, SFR, etc...
+secure_rules="no"

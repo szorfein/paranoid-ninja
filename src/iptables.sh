@@ -26,7 +26,8 @@ done
 # Check network device and ip
 
 IF=$net_device
-INT_NET=$(ip a show $IF | grep inet | awk '{print $2}' | head -n 1)
+INT_ADDR=$(ip a show $IF | grep -Eo '[0-9.]+/[0-9]+' | sed 's:/[0-9]*::' | head -n 1)
+INT_NET=$(ipcalc $INT_ADDR | grep -i 'network:' | awk '{print $2}')
 
 [[ -z $IF ]] && die "Device network UP no found"
 [[ -z $INT_NET ]] && die "Ip addr no found"
@@ -77,8 +78,11 @@ if ! grep VirtualAddrNetworkIPv4 $torrc > /dev/null ; then
 fi
 readonly virt_tor=$(grep VirtualAddrNetworkIPv4 $torrc | awk '{print $2}')
 
-# non Tor addr
-readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_ipv4 192.168.0.0/16 192.168.99.0/16"
+# LAN destination, shouldn't be routed through Tor
+readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_ipv4 192.168.0.0/16 192.168.99.0/16 $INT_NET"
+
+# other IANA reserved blocks
+readonly resv_iana="0.0.0.0/8 100.64.0.0/10 169.254.0.0/16 192.0.0.0/24 192.0.2.0/24 192.88.99.0/24 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4 255.255.255.255/32"
 
 # Just to be sure :)
 [[ -z $trans_port ]] && die "No TransPort value found on $torrc"
@@ -118,35 +122,63 @@ clearIptables
 
 echo "[+] Setting up $firewall rules ..."
 
+bad_sources() {
+  # bad source chain
+  $IPT -N BAD_SOURCES
+  # pass traffic with bad src addresses to the Bad Sources Chain
+  $IPT -A INPUT -j BAD_SOURCES
+  # drop incoming traffic from our own host
+  if ! $QUIET ; then
+    $IPT -A BAD_SOURCES -i $IF -s $INT_ADDR -j LOG --log-prefix "SPOOFED PKT "
+    $IPT -A BAD_SOURCES -o $IF ! -s $INT_ADDR -j LOG --log-prefix "SPOOFED PKT "
+  fi
+  # drop incoming allegedly from our host
+  $IPT -A BAD_SOURCES -i $IF -s $INT_ADDR -j DROP
+  # drop outgoing traffic not from our own host
+  $IPT -A BAD_SOURCES -o $IF ! -s $INT_ADDR -j DROP
+  # drop other bad sources
+  for lan in $non_tor ; do
+    $IPT -A BAD_SOURCES -i $IF -s $lan -j DROP
+  done
+  for iana in $resv_iana ; do
+    $IPT -A BAD_SOURCES -i $IF -s $iana -j DROP
+  done
+}
+
 # block bad tcp flags if secure_rules="yes"
 secure_rules() {
   # bad flag chain
   $IPT -N BAD_FLAGS
   # pass traffic with bad flags to the bad flag chain
   $IPT -A INPUT -p tcp -j BAD_FLAGS
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "IPT: Bad SF Flag "
+  if ! $QUIET ; then
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "IPT: Bad SF Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST -j LOG --log-prefix "IPT: Bad SR Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,PSH SYN,FIN,PSH -j LOG --log-prefix "IPT: Bad SFP Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST SYN,FIN,RST -j LOG --log-prefix "IPT: Bad SFR Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST,PSH SYN,FIN,RST,PSH -j LOG --log-prefix "IPT: Bad SFRP Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags FIN FIN -j LOG --log-prefix "IPT: Bad F Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "IPT: Null Flag "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL ALL -j LOG --log-prefix "IPT: All Flags "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL FIN,URG,PSH -j LOG --log-prefix "IPT: Nmap:Xmas Flags "
+    $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL RST,ACK,FIN,URG -j LOG --log-prefix "IPT: Merry Xmas Flags "
+  fi
   $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST -j LOG --log-prefix "IPT: Bad SR Flag "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,PSH SYN,FIN,PSH -j LOG --log-prefix "IPT: Bad SFP Flag "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,PSH SYN,FIN,PSH -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST SYN,FIN,RST -j LOG --log-prefix "IPT: Bad SFR Flag "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST SYN,FIN,RST -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST,PSH SYN,FIN,RST,PSH -j LOG --log-prefix "IPT: Bad SFRP Flag "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST,PSH SYN,FIN,RST,PSH -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags FIN FIN -j LOG --log-prefix "IPT: Bad F Flag "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags FIN FIN -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "IPT: Null Flag "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL NONE -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL ALL -j LOG --log-prefix "IPT: All Flags "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL ALL -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL FIN,URG,PSH -j LOG --log-prefix "IPT: Nmap:Xmas Flags "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL FIN,URG,PSH -j DROP
-  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL RST,ACK,FIN,URG -j LOG --log-prefix "IPT: Merry Xmas Flags "
   $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL RST,ACK,FIN,URG -j DROP
 }
 
-if [ $secure_rules == "yes" ] ; then secure_rules ; fi
+if [ $secure_rules == "yes" ] ; then 
+  bad_sources
+  secure_rules
+fi
 
 ####################################################
 # Input chain
@@ -156,12 +188,6 @@ if ! $QUIET ; then
 fi
 $IPT -A INPUT -m state --state INVALID -j DROP
 $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-# Anti-spoofing
-if ! $QUIET ; then
-  $IPT -A INPUT -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
-fi
-$IPT -A INPUT -i $IF ! -s $INT_NET -j DROP
 
 # Accept rule
 $IPT -A INPUT -i lo -j ACCEPT
@@ -273,12 +299,6 @@ if ! $QUIET ; then
 fi
 $IPT -A FORWARD -m state --state INVALID -j DROP
 $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-# Anti-spoofing rule
-if ! $QUIET ; then
-  $IPT -A FORWARD -i $IF ! -s $INT_NET -j LOG --log-prefix "SPOOFED PKT "
-fi
-$IPT -A FORWARD -i $IF ! -s $INT_NET -j DROP
 
 # Accept rule
 
