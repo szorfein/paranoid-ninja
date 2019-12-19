@@ -109,11 +109,6 @@ fi
 # Look which system need
 modprobe ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 
-# Disable ipv6
-# No need enable on archlinux
-#sysctl -w net.ipv6.conf.all.disable_ipv6=1
-#sysctl -w net.ipv6.conf.default.disable_ipv6=1
-
 ####################################################
 # Flushing rules
 
@@ -121,6 +116,26 @@ echo "[+] Flushing existing rules..."
 clearIptables
 
 echo "[+] Setting up $firewall rules ..."
+
+icmp_rules() {
+  # Create ICMP incoming chain
+  $IPT -N ICMP_IN
+  $IPT -A INPUT -p icmp -j ICMP_IN
+  # ICMP for incoming traffic
+  $IPT -A ICMP_IN -i $IF -p icmp --icmp-type 0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+  $IPT -A ICMP_IN -i $IF -p icmp --icmp-type 3 -m state --state ESTABLISHED,RELATED -j ACCEPT
+  $IPT -A ICMP_IN -i $IF -p icmp --icmp-type 11 -m state --state ESTABLISHED,RELATED -j ACCEPT
+  $IPT -A ICMP_IN -i $IF -p icmp -j LOG --log-prefix "IPT: ICMP_IN "
+  $IPT -A ICMP_IN -i $IF -p icmp -j DROP
+
+  # Create ICMP outgoing chain
+  $IPT -N ICMP_OUT
+  $IPT -A OUTPUT -p icmp -j ICMP_OUT
+  # ICMP for outgoing traffic
+  $IPT -A ICMP_OUT -o $IF -p icmp --icmp-type 8 -m state --state NEW -j ACCEPT
+  $IPT -A ICMP_OUT -o $IF -p icmp -j LOG --log-prefix "IPT: ICMP_OUT "
+  $IPT -A ICMP_OUT -o $IF -p icmp -j DROP
+}
 
 bad_sources() {
   # bad source chain
@@ -176,6 +191,7 @@ secure_rules() {
 }
 
 if [ $secure_rules == "yes" ] ; then 
+  icmp_rules
   bad_sources
   secure_rules
 fi
@@ -241,17 +257,14 @@ if ! $QUIET ; then
 fi
 $IPT -A INPUT -m state --state INVALID -j DROP
 
-$IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-# Accept rule
+# allow access to the Loopback host
 $IPT -A INPUT -i lo -j ACCEPT
+$IPT -A OUTPUT -o lo -j ACCEPT
 
 # prevent SYN flooding
 $IPT -A INPUT -i $IF -p tcp --syn -m limit --limit 5/second -j ACCEPT
-$IPT -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 
-# ssh
-$IPT -A INPUT -i $IF -p tcp -s $INT_NET --dport 22 --syn -m state --state NEW -j ACCEPT
+$IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 if ! $tor_proxy ; then
   $IPT -A INPUT -i $IF -p udp -s $INT_NET --dport $dns_port -j ACCEPT
@@ -261,7 +274,7 @@ fi
 if ! $QUIET ; then
   $IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
-$IPT -A INPUT -j DROP
+$IPT -A INPUT -f -j DROP
 
 ####################################################
 # Output chain
@@ -271,21 +284,13 @@ if ! $QUIET ; then
   $IPT -A OUTPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A OUTPUT -m state --state INVALID -j DROP
+
 $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-# Accept rules out
-$IPT -A OUTPUT -o lo -j ACCEPT
-$IPT -A OUTPUT -p tcp --dport 22 --syn -m state --state NEW -j ACCEPT
-
-# Allow loopback output
-$IPT -A OUTPUT -o lo -d 127.0.0.1/32 -j ACCEPT
 
 if ! $tor_proxy ; then
   $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport 53 -j ACCEPT
   $IPT -A OUTPUT -o $IF -s $INT_NET -p tcp -m tcp --dport 443 -j ACCEPT
 fi
-
-$IPT -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
@@ -316,7 +321,6 @@ done
 
 # if Docker
 if [ $docker_use == "yes" ] ; then
-
   for _docker_ipv4 in $docker_ipv4 ; do
     # allow local server 80
     $IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
@@ -325,9 +329,6 @@ if [ $docker_use == "yes" ] ; then
     $IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
   done
 fi
-
-# freenode 7000
-$IPT -A OUTPUT -p tcp -m tcp --dport 7000 -j ACCEPT
 
 # Default output log rule
 if ! $QUIET ; then
@@ -348,5 +349,15 @@ $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 if ! $QUIET ; then
   $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
+
+####################################################
+# Others rules
+
+# ssh
+$IPT -A INPUT -i $IF -p tcp -s $INT_NET --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+$IPT -A OUTPUT -o $IF -p tcp -d $INT_NET --sport 22 -m state --state ESTABLISHED -j ACCEPT
+
+# freenode 7000
+$IPT -A OUTPUT -p tcp -m tcp --dport 7000 -j ACCEPT
 
 echo "Setting iptable ended"
