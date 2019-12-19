@@ -78,7 +78,7 @@ fi
 readonly virt_tor=$(grep VirtualAddrNetworkIPv4 $torrc | awk '{print $2}')
 
 # non Tor addr
-readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_ipv4 192.168.0.0/16"
+readonly non_tor="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 $docker_ipv4 192.168.0.0/16 192.168.99.0/16"
 
 # Just to be sure :)
 [[ -z $trans_port ]] && die "No TransPort value found on $torrc"
@@ -117,6 +117,36 @@ echo "[+] Flushing existing rules..."
 clearIptables
 
 echo "[+] Setting up $firewall rules ..."
+
+# block bad tcp flags if secure_rules="yes"
+secure_rules() {
+  # bad flag chain
+  $IPT -N BAD_FLAGS
+  # pass traffic with bad flags to the bad flag chain
+  $IPT -A INPUT -p tcp -j BAD_FLAGS
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "IPT: Bad SF Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST -j LOG --log-prefix "IPT: Bad SR Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,PSH SYN,FIN,PSH -j LOG --log-prefix "IPT: Bad SFP Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,PSH SYN,FIN,PSH -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST SYN,FIN,RST -j LOG --log-prefix "IPT: Bad SFR Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST SYN,FIN,RST -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST,PSH SYN,FIN,RST,PSH -j LOG --log-prefix "IPT: Bad SFRP Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,RST,PSH SYN,FIN,RST,PSH -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags FIN FIN -j LOG --log-prefix "IPT: Bad F Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags FIN FIN -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "IPT: Null Flag "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL NONE -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL ALL -j LOG --log-prefix "IPT: All Flags "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL ALL -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL FIN,URG,PSH -j LOG --log-prefix "IPT: Nmap:Xmas Flags "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL FIN,URG,PSH -j DROP
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL RST,ACK,FIN,URG -j LOG --log-prefix "IPT: Merry Xmas Flags "
+  $IPT -A BAD_FLAGS -p tcp --tcp-flags ALL RST,ACK,FIN,URG -j DROP
+}
+
+if [ $secure_rules == "yes" ] ; then secure_rules ; fi
 
 ####################################################
 # Input chain
@@ -208,6 +238,9 @@ for i in $(seq 12298 12300) ; do
       $IPT -A OUTPUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
       $IPT -A OUTPUT -s "$_docker_ipv4" -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
     done
+    #$IPT -A OUTPUT -s $INT_NET -p tcp -m tcp --dport 8443 -j ACCEPT # kubectl
+    $IPT -A OUTPUT -d 192.168.99.0/16 -p tcp -m tcp --dport 8443 -j ACCEPT # kubectl
+    $IPT -A INPUT -s 192.168.99.0/16 -p tcp -m tcp --sport 8443 -j ACCEPT # kubectl
   fi
 done
 

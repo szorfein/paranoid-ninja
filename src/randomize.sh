@@ -335,7 +335,7 @@ checkNetworkConf() {
 
 setDhcp() {
   sleep 1
-  dhcpcd $net_device 2> /dev/null
+  dhcpcd -S domain_name_servers=127.0.0.1 $net_device 2> /dev/null
   sleep 2
   log "dhcpd is setup."
 }
