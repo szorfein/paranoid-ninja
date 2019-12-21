@@ -245,7 +245,7 @@ ctrl_static_mac() {
 launchService() {
   local if_here
   echo "check service $1"
-  if if_here=$(pgrep -x $1) ; then
+  if if_here=$(pgrep $1) ; then
     echo "[+] Restarting $1 ..."
     systemctl restart $1 &
     sleep 3

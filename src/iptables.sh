@@ -295,6 +295,36 @@ fi
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
 
+docker_rules() {
+  # Create the DOCKER-CUSTOM
+  $IPT -N DOCKER_IN
+  $IPT -N DOCKER_OUT
+  $IPT -A INPUT -j DOCKER_IN
+  $IPT -A OUTPUT -j DOCKER_OUT
+
+  for _docker_ipv4 in $docker_ipv4 ; do
+    $IPT -A DOCKER_IN -s $_docker_ipv4 -d $_docker_ipv4 -p udp -m udp --dport 5353 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_IN -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_IN -s "$_docker_ipv4" -p tcp -m tcp --dport 3000 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s $_docker_ipv4 -d $_docker_ipv4 -p udp -m udp --sport 5353 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 8.8.8.8 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 8.8.4.4 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 8080 -j ACCEPT # docker web
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 80 -j ACCEPT # docker web
+    # allow local server 80
+    #$IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
+
+    # allow local database on 5432 (postgres)
+    $IPT -A DOCKER_OUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
+  done
+}
+
+# if Docker
+if [ $docker_use == "yes" ] ; then
+  docker_rules
+fi
+
 # sshuttle
 for i in $(seq 12298 12300) ; do
   #$IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m multiport --dports 12300,12299,12298 -j ACCEPT
@@ -302,33 +332,15 @@ for i in $(seq 12298 12300) ; do
 
   if [ $docker_use == "yes" ] ; then
     for _docker_ipv4 in $docker_ipv4 ; do
-      $IPT -A INPUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
-      $IPT -A OUTPUT -s "$_docker_ipv4" -d 8.8.8.8 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
-      $IPT -A OUTPUT -s "$_docker_ipv4" -d 8.8.4.4 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
-      $IPT -A OUTPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
-      $IPT -A INPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
-      $IPT -A INPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 3000 -j ACCEPT # docker with nodejs
-      $IPT -A OUTPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 8080 -j ACCEPT # docker web
-      $IPT -A OUTPUT -s "$_docker_ipv4" -p tcp -m tcp --dport 80 -j ACCEPT # docker web
-      $IPT -A OUTPUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
-      $IPT -A OUTPUT -s "$_docker_ipv4" -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A DOCKER_IN -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
     done
     #$IPT -A OUTPUT -s $INT_NET -p tcp -m tcp --dport 8443 -j ACCEPT # kubectl
     $IPT -A OUTPUT -d 192.168.99.0/16 -p tcp -m tcp --dport 8443 -j ACCEPT # kubectl
     $IPT -A INPUT -s 192.168.99.0/16 -p tcp -m tcp --sport 8443 -j ACCEPT # kubectl
   fi
 done
-
-# if Docker
-if [ $docker_use == "yes" ] ; then
-  for _docker_ipv4 in $docker_ipv4 ; do
-    # allow local server 80
-    $IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
-
-    # allow local database on 5432
-    $IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
-  done
-fi
 
 # Default output log rule
 if ! $QUIET ; then
