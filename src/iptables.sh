@@ -5,6 +5,7 @@ set -ue
 
 IPT=iptables
 BACKUP_FILES="/etc/tor/torrc /etc/resolv.conf"
+SHOW_LOG=true
 
 ####################################################
 # Check Bins
@@ -110,6 +111,13 @@ fi
 modprobe ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
 
 ####################################################
+# Options
+
+if [[ $firewall_quiet =~ ^y|^Y|^t|^T ]] ; then
+  SHOW_LOG=false
+fi
+
+####################################################
 # Flushing rules
 
 echo "[+] Flushing existing rules..."
@@ -125,7 +133,9 @@ icmp_rules() {
   $IPT -A ICMP_IN -i $IF -p icmp --icmp-type 0 -m state --state ESTABLISHED,RELATED -j ACCEPT
   $IPT -A ICMP_IN -i $IF -p icmp --icmp-type 3 -m state --state ESTABLISHED,RELATED -j ACCEPT
   $IPT -A ICMP_IN -i $IF -p icmp --icmp-type 11 -m state --state ESTABLISHED,RELATED -j ACCEPT
-  $IPT -A ICMP_IN -i $IF -p icmp -j LOG --log-prefix "IPT: ICMP_IN "
+  if $SHOW_LOG ; then
+    $IPT -A ICMP_IN -i $IF -p icmp -j LOG --log-prefix "IPT: ICMP_IN "
+  fi
   $IPT -A ICMP_IN -i $IF -p icmp -j DROP
 
   # Create ICMP outgoing chain
@@ -133,7 +143,9 @@ icmp_rules() {
   $IPT -A OUTPUT -p icmp -j ICMP_OUT
   # ICMP for outgoing traffic
   $IPT -A ICMP_OUT -o $IF -p icmp --icmp-type 8 -m state --state NEW -j ACCEPT
-  $IPT -A ICMP_OUT -o $IF -p icmp -j LOG --log-prefix "IPT: ICMP_OUT "
+  if $SHOW_LOG ; then
+    $IPT -A ICMP_OUT -o $IF -p icmp -j LOG --log-prefix "IPT: ICMP_OUT "
+  fi
   $IPT -A ICMP_OUT -o $IF -p icmp -j DROP
 }
 
@@ -143,7 +155,7 @@ bad_sources() {
   # pass traffic with bad src addresses to the Bad Sources Chain
   $IPT -A INPUT -j BAD_SOURCES
   # drop incoming traffic from our own host
-  if ! $QUIET ; then
+  if $SHOW_LOG ; then
     $IPT -A BAD_SOURCES -i $IF -s $INT_ADDR -j LOG --log-prefix "SPOOFED PKT "
     $IPT -A BAD_SOURCES -o $IF ! -s $INT_ADDR -j LOG --log-prefix "SPOOFED PKT "
   fi
@@ -166,7 +178,7 @@ secure_rules() {
   $IPT -N BAD_FLAGS
   # pass traffic with bad flags to the bad flag chain
   $IPT -A INPUT -p tcp -j BAD_FLAGS
-  if ! $QUIET ; then
+  if $SHOW_LOG ; then
     $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "IPT: Bad SF Flag "
     $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST -j LOG --log-prefix "IPT: Bad SR Flag "
     $IPT -A BAD_FLAGS -p tcp --tcp-flags SYN,FIN,PSH SYN,FIN,PSH -j LOG --log-prefix "IPT: Bad SFP Flag "
@@ -206,7 +218,7 @@ tor_proxy() {
   echo "Nat rules tor_uid: $tor_uid, dns: $dns_port, trans: $trans_port, virt: $virt_tor"
 
   $IPT -t nat -A PREROUTING ! -i lo -p udp -m udp --dport 53 -j REDIRECT --to-ports $dns_port
-  $IPT -t nat -A PREROUTING ! -i lo -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
+  #$IPT -t nat -A PREROUTING ! -i lo -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j REDIRECT --to-ports $trans_port
 
   $IPT -t nat -A OUTPUT -m owner --uid-owner $tor_uid -j RETURN
 
@@ -237,8 +249,8 @@ tor_proxy() {
   $IPT -t nat -A OUTPUT -p icmp -j REDIRECT --to-ports $trans_port
   $IPT -t nat -A OUTPUT -p udp -j REDIRECT --to-ports $trans_port
 
-  #$IPT -A OUTPUT -p tcp --dport 8890 --syn -m state --state NEW -j ACCEPT
-  #$IPT -A INPUT -p tcp --sport 8890 --syn -m state --state NEW -j ACCEPT
+  $IPT -A OUTPUT -p tcp --dport 8890 --syn -m state --state NEW -j ACCEPT # sshuttle
+  $IPT -A INPUT -p tcp --sport 8890 --syn -m state --state NEW -j ACCEPT # sshuttle
 
   $IPT -A TOR_PROXY -o $IF -m owner --uid-owner $tor_uid -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j ACCEPT
 
@@ -246,13 +258,58 @@ tor_proxy() {
   $IPT -A TOR_PROXY -d 127.0.0.1/32 -p tcp -m tcp --dport $trans_port --tcp-flags FIN,SYN,RST,ACK SYN -j ACCEPT
 }
 
-# start tor proxy if enable
-$tor_proxy && tor_proxy
+# Start tor proxy if enable, else try to launch sshuttle and else you're naked :)
+if $tor_proxy ; then
+  [ $sshuttle_use == "yes" ] && {
+    if systemctl is-active $sshuttle_service_name > /dev/null ; then 
+      systemctl stop $sshuttle_service_name
+    fi
+  }
+  tor_proxy
+elif [ $sshuttle_use == "yes" ] ; then
+  if ! systemctl is-active $sshuttle_service_name > /dev/null ; then 
+    systemctl start $sshuttle_service_name
+  fi
+fi
+
+docker_rules() {
+  # Create the DOCKER-CUSTOM
+  $IPT -N DOCKER_IN
+  $IPT -N DOCKER_OUT
+  $IPT -A INPUT -j DOCKER_IN
+  $IPT -A OUTPUT -j DOCKER_OUT
+
+  for _docker_ipv4 in $docker_ipv4 ; do
+    if $tor_proxy ; then
+      $IPT -A DOCKER_IN -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 9040 -j ACCEPT
+    fi
+    $IPT -A DOCKER_IN -s $_docker_ipv4 -d $_docker_ipv4 -p udp -m udp --dport 5353 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_IN -d "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_IN -s "$_docker_ipv4" -p tcp -m tcp --dport 3000 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s $_docker_ipv4 -d $_docker_ipv4 -p udp -m udp --sport 5353 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 8.8.8.8 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 8.8.4.4 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 8080 -j ACCEPT # docker web
+    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 80 -j ACCEPT # docker web
+    # allow local server 80
+    $IPT -A DOCKER_IN -i lo -p tcp -m tcp --dport 80 -j ACCEPT
+    $IPT -A DOCKER_IN -i lo -d $INT_ADDR -p tcp -m tcp --sport 443 -j ACCEPT
+
+    # allow local database on 5432 (postgres)
+    $IPT -A DOCKER_OUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
+  done
+}
+
+# if Docker
+if [ $docker_use == "yes" ] ; then
+  docker_rules
+fi
 
 ####################################################
 # Input chain
 
-if ! $QUIET ; then
+if $SHOW_LOG ; then
   $IPT -A INPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A INPUT -m state --state INVALID -j DROP
@@ -271,7 +328,7 @@ if ! $tor_proxy ; then
 fi
 
 # default input log rule
-if ! $QUIET ; then
+if $SHOW_LOG ; then
   $IPT -A INPUT ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 $IPT -A INPUT -f -j DROP
@@ -280,7 +337,7 @@ $IPT -A INPUT -f -j DROP
 # Output chain
 
 # Tracking rules
-if ! $QUIET ; then
+if $SHOW_LOG ; then
   $IPT -A OUTPUT -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A OUTPUT -m state --state INVALID -j DROP
@@ -290,60 +347,34 @@ $IPT -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 if ! $tor_proxy ; then
   $IPT -A OUTPUT -o $IF -s $INT_NET -p udp -m udp --dport 53 -j ACCEPT
   $IPT -A OUTPUT -o $IF -s $INT_NET -p tcp -m tcp --dport 443 -j ACCEPT
+  $IPT -A OUTPUT -o $IF -s $INT_NET -p tcp -m tcp --dport 80 -j ACCEPT
 fi
 
 # Torrents
 $IPT -A OUTPUT -o $IF -p udp -m multiport --sports 6881,6882,6883,6884,6885,6886 -j ACCEPT
 
-docker_rules() {
-  # Create the DOCKER-CUSTOM
-  $IPT -N DOCKER_IN
-  $IPT -N DOCKER_OUT
-  $IPT -A INPUT -j DOCKER_IN
-  $IPT -A OUTPUT -j DOCKER_OUT
-
-  for _docker_ipv4 in $docker_ipv4 ; do
-    $IPT -A DOCKER_IN -s $_docker_ipv4 -d $_docker_ipv4 -p udp -m udp --dport 5353 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_IN -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_IN -s "$_docker_ipv4" -p tcp -m tcp --dport 3000 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_OUT -s $_docker_ipv4 -d $_docker_ipv4 -p udp -m udp --sport 5353 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 8.8.8.8 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 8.8.4.4 -p udp -m udp --dport 53 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 443 -j ACCEPT # docker with nodejs
-    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 8080 -j ACCEPT # docker web
-    $IPT -A DOCKER_OUT -s "$_docker_ipv4" -p tcp -m tcp --dport 80 -j ACCEPT # docker web
-    # allow local server 80
-    #$IPT -A OUTPUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 80 -j ACCEPT
-
-    # allow local database on 5432 (postgres)
-    $IPT -A DOCKER_OUT -s $_docker_ipv4 -d $_docker_ipv4 -p tcp -m tcp --dport 5432 -j ACCEPT
-  done
-}
-
-# if Docker
-if [ $docker_use == "yes" ] ; then
-  docker_rules
-fi
 
 # sshuttle
 for i in $(seq 12298 12300) ; do
   #$IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m multiport --dports 12300,12299,12298 -j ACCEPT
-  $IPT -A OUTPUT -o $IF -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+  $IPT -A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
 
   if [ $docker_use == "yes" ] ; then
     for _docker_ipv4 in $docker_ipv4 ; do
       $IPT -A DOCKER_IN -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
       $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d "$_docker_ipv4" -p tcp -m tcp --dport $i -j ACCEPT
       $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 127.0.0.1/32 -p tcp -m tcp --dport $i -j ACCEPT
+      $IPT -A DOCKER_OUT -s "$_docker_ipv4" -d 127.0.0.1/32 -p udp -m udp --dport $i -j ACCEPT
     done
     #$IPT -A OUTPUT -s $INT_NET -p tcp -m tcp --dport 8443 -j ACCEPT # kubectl
     $IPT -A OUTPUT -d 192.168.99.0/16 -p tcp -m tcp --dport 8443 -j ACCEPT # kubectl
     $IPT -A INPUT -s 192.168.99.0/16 -p tcp -m tcp --sport 8443 -j ACCEPT # kubectl
+    $IPT -A OUTPUT -o $IF -s $INT_ADDR -p udp -m udp --dport $i -j ACCEPT # sshuttle dns
   fi
 done
 
 # Default output log rule
-if ! $QUIET ; then
+if $SHOW_LOG ; then
   $IPT -A OUTPUT ! -o lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 
@@ -351,14 +382,14 @@ fi
 # Forward chain
 
 # Tracking rule
-if ! $QUIET ; then
+if $SHOW_LOG ; then
   $IPT -A FORWARD -m state --state INVALID -j LOG --log-prefix "DROP INVALID " --log-ip-options --log-tcp-options
 fi
 $IPT -A FORWARD -m state --state INVALID -j DROP
 $IPT -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Default log rule
-if ! $QUIET ; then
+if $SHOW_LOG ; then
   $IPT -A FORWARD ! -i lo -j LOG --log-prefix "DROP " --log-ip-options --log-tcp-options
 fi
 

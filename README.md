@@ -76,3 +76,7 @@ And one for the wifi card:
 Will randomize the MAC address (`-m`), the ip address (`-i`), apply a transparent proxy (`-p`), change the hostname (`-H`), and change the time zone (`-t`).  
 
 All command need `-c /etc/paranoid-ninja/paranoid.conf` except with `-s|--status`.  
+
+### Support
+Any support will be greatly appreciated, star the repo, coffee, donation... thanks you !   
+[![Donate](https://img.shields.io/badge/don-liberapay-1ba9a4)](https://liberapay.com/szorfein) [![Donate](https://img.shields.io/badge/don-patreon-ab69f4)](https://www.patreon.com/szorfein)

@@ -148,6 +148,7 @@ clearIptables() {
   local ipt=$(which iptables)
   $ipt -F
   $ipt -F -t nat
+  $ipt -F -t mangle
   $ipt -X
   $ipt -P INPUT DROP
   $ipt -P OUTPUT DROP
