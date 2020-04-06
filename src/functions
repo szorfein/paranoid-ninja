@@ -261,3 +261,9 @@ restartDaemons() {
     launchService $daemon
   done
 }
+
+load_modules() {
+  for m in $@ ; do
+    modprobe $m
+  done
+}

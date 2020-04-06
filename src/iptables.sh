@@ -108,7 +108,8 @@ fi
 # load modules
 
 # Look which system need
-modprobe ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
+load_modprobe ip_tables iptable_nat ip_conntrack iptable-filter ipt_state
+load_modprobe nf_log_ipv4 nf_log_arp xt_LOG
 
 ####################################################
 # Options
